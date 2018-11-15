@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Disable waveform dumping
+OMSP_NODUMP=1
+export OMSP_NODUMP
+
+# Choose simulator:
+#                   - iverilog  : Icarus Verilog  (default)
+#                   - cver      : CVer
+#                   - verilog   : Verilog-XL
+#                   - ncverilog : NC-Verilog
+#                   - vcs       : VCS
+#                   - vsim      : Modelsim
+#                   - isim      : Xilinx simulator
+OMSP_SIMULATOR=iverilog
+export OMSP_SIMULATOR
+
+rm -rf ./cov_work
+rm -rf ./log/*.log
+mkdir  ./log
+
+# DMA read write test with simple device
+../bin/msp430sim dma_dev_rd_wr    | tee ./log/dma_dev_rd_wr.log
+
+# Report regression results
+../bin/parse_results
+exit $?
