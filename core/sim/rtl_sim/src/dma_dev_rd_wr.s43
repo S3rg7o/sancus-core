@@ -55,7 +55,7 @@
   
         /* --------------     Values of START_ADD and NUM_WORDS  --------- */
 .set START_ADD      , DMEM_200     ; Starting memory address to be written 
-.set N_WORDS        , 0x0012
+.set N_WORDS        , 0x0022
 .set OUT_VALUE      , 0xF1D0
 main:
 

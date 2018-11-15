@@ -560,6 +560,10 @@ always @(dma_cntrl_state)
 		18	: dma_state   = "WAIT_DEV_ACK";
 		19	: dma_state   = "EMPTY_FIFO_READ";
 		20	: dma_state   = "RESET";      	
+		21  : dma_state   = "WAIT_MSP";
+		22  : dma_state   = "EMPTY_FIFO_WRITE";
+		23  : dma_state   = "OLD_ADDR_EMP_FIFO_W";	
+		24  : dma_state   = "RESTORE_DEV_COUNT";
 	default : dma_state   = "XXXXX";
 	endcase
 `endif
