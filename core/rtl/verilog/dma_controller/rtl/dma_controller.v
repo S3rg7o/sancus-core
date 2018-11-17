@@ -44,7 +44,8 @@ input [ADD_LEN-1:0] num_words;  // 1) I should be able to write at max. as many 
 								// 2) Or num_words can bigger and let FIFO_FULL FSM-branch handle the situation.It's up to you. +++
 								
 input [ADD_LEN:0] start_addr;
-wire [ADD_LEN-1:0] start_addr_shifted = start_addr >> 1; // in the memory backbone it's multiplied by 2, so now I divide it
+wire [ADD_LEN-1:0] start_addr_shifted = start_addr >> 1; // In the memory backbone dma_addr[15:1], so it's considered
+														 // as multiplied by 2. To be consistent, now I divide it
 
 input rd_wr;
 input rqst;
