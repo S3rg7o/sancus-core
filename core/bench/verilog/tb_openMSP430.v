@@ -468,12 +468,9 @@ wire		dma_ack;
 wire [15:0]	dev_in;
 wire		dma_end_flag;
 wire [15:0] per_dout_dma_dev0;
-<<<<<<< HEAD
-//wire [15:0] dma_addr_logical = dma_addr << 1;//purely for GTKVIEW waveforms
 
-=======
-wire [15:0] mem_accesed = dma_addr << 1;//purely for GTKVIEW waveforms
->>>>>>> write_change
+wire [15:0] mem_accesed = dma_addr << 1; // show mem location being accesesed on GTKWAVE
+
 //
 // DMA Controller
 //----------------------------------
