@@ -468,7 +468,7 @@ wire		dma_ack;
 wire [15:0]	dev_in;
 wire		dma_end_flag;
 wire [15:0] per_dout_dma_dev0;
-wire [15:0] mem_accesed = dma_addr << 1; // show mem. location being accesesed on GTKWAVE
+wire [15:0] mem_accessed = dma_addr << 1; // show mem. location being accesesed on GTKWAVE
 
 //
 // DMA Controller

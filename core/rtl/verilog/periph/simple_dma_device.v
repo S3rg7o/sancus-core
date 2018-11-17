@@ -64,8 +64,8 @@ parameter              DEC_WD		=  4;
 parameter [DEC_WD-1:0] START_ADDR	= 'h00,
                        N_WORDS	    = 'h02,
                        CONFIG 		= 'h04,
-                       DATA_REG		= 'h06,
-                       OUT_REG      = 'h08;  
+                       READ_REG		= 'h06,
+                       WRITE_REG      = 'h08;  
 
 // Register one-hot decoder utilities
 parameter              DEC_SZ      =  (1 << DEC_WD);
@@ -75,8 +75,8 @@ parameter [DEC_SZ-1:0] BASE_REG    =  {{DEC_SZ-1{1'b0}}, 1'b1};
 parameter [DEC_SZ-1:0] START_ADDR_D 	= (BASE_REG << START_ADDR),
                        N_WORDS_D    	= (BASE_REG << N_WORDS),
                        CONFIG_D    		= (BASE_REG << CONFIG),
-                       DATA_REG_D    	= (BASE_REG << DATA_REG),
-                       OUT_REG_D    	= (BASE_REG << OUT_REG);
+                       READ_REG_D    	= (BASE_REG << READ_REG),
+                       WRITE_REG_D    	= (BASE_REG << WRITE_REG);
 
 
 //============================================================================
@@ -93,8 +93,8 @@ wire [DEC_WD-1:0] reg_addr  =  {per_addr[DEC_WD-2:0], 1'b0};
 wire [DEC_SZ-1:0] reg_dec   =  (START_ADDR_D  &  {DEC_SZ{(reg_addr == START_ADDR )}}) |
                                (N_WORDS_D     &  {DEC_SZ{(reg_addr == N_WORDS )}})    |
                                (CONFIG_D      &  {DEC_SZ{(reg_addr == CONFIG )}})     |	 		
-                               (DATA_REG_D    &  {DEC_SZ{(reg_addr == DATA_REG )}})   | 		
-                               (OUT_REG_D     &  {DEC_SZ{(reg_addr == OUT_REG )}});
+                               (READ_REG_D    &  {DEC_SZ{(reg_addr == READ_REG )}})   | 		
+                               (WRITE_REG_D   &  {DEC_SZ{(reg_addr == WRITE_REG )}});
 
 // Read/Write probes
 wire              reg_write =  |per_we & reg_sel;
@@ -145,11 +145,11 @@ localparam NON_ATOMIC = 3;
 localparam ACK_SET    = 4;
 localparam END_OP     = 15;
 
-// -----------------------------------------------------------------------------
-// | END_OP	| 0 | ~DEV_ACK | ---  |  ACK_SET  | NON_ATOMIC | RD_WR | 0 | START |
-// -----------------------------------------------------------------------------
-// |  15   | 14	|    13    | ---  |     4     |     3      |   2   | 1  |  0   |
-// -----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// | END_OP	| 0 | ~DEV_ACK |  0  | RESET_REGS | --- |  ACK_SET  | NON_ATOMIC | RD_WR | 0 | START |
+// -----------------------------------------------------------------------------------------------
+// |  15   | 14	|    13    | 12  |     11     | --- |     4     |     3      |   2   | 1  |  0   |
+// -----------------------------------------------------------------------------------------------
 
 reg  [15:0] config_reg;
 wire        config_wr_ext = reg_wr[CONFIG];
@@ -162,28 +162,32 @@ always @ (posedge clk or posedge reset )
                                              config_reg[3:1], config_reg[START] & ~internal_status[7]}; 
   else                       config_reg <= config_reg;
 
-// DATA_REG: Bridge between DMA Contr. and Dev.- It's Read-only for the CPU!
+// READ_REG: Bridge between DMA Contr. and Dev.- It's Read-only for the CPU!
 //---------------------------------------   
-reg  [15:0] data_reg;
-wire        data_wr = dma_ack & dma_rqst & dma_rd_wr;
+reg  [15:0] read_reg;
+wire        read_reg_wr = dma_ack & dma_rqst & dma_rd_wr;
+wire        reg_reset;
+wire		read_reg_reset = reset | reg_reset;
 
-always @ (posedge clk or posedge reset)
-  if (reset)        data_reg <=  16'h0000;
-  else if (data_wr) data_reg <=  dev_in; // input from the DMA controller
-  else 				data_reg <= data_reg;
+always @ (posedge clk or posedge read_reg_reset)
+  if (read_reg_reset)            read_reg <=  16'h0000;
+  else if (read_reg_wr) read_reg <=  dev_in; // input from the DMA controller
+  else 				    read_reg <= read_reg;
 
 
-// OUT_REG: config what to be written in the memory
+// WRITE_REG: config what to be written in the memory
 //---------------------------------------   
-reg [15:0] out_reg;
-wire out_reg_wr = reg_wr[OUT_REG];
-always @ (posedge clk or posedge reset)
-  if (reset)           out_reg <= 16'h0000;
-  else if (out_reg_wr) out_reg <= per_din;
-  else	               out_reg <= out_reg;
+reg [15:0] write_reg;
+wire write_reg_wr = reg_wr[WRITE_REG];
+wire write_reg_reset = reset | reg_reset;
+
+always @ (posedge clk or posedge write_reg_reset)
+  if (write_reg_reset)   write_reg <= 16'h0000;
+  else if (write_reg_wr) write_reg <= per_din;
+  else	                 write_reg <= write_reg;
   
-//assign dev_out 			= (~dma_rd_wr & dma_rqst) ? out_reg : 16'h0000; (sergio) it's not a problem to have the device always outputing the out_reg value. Memory is still written as usual
-assign dev_out 			= out_reg;
+//assign dev_out 		= (~dma_rd_wr & dma_rqst) ? write_reg : 16'h0000; (sergio) it's not a problem to have the device always outputing the write_reg value. Memory is still written as usual
+assign dev_out 			= write_reg;
 
 
 		
@@ -197,14 +201,14 @@ assign dev_out 			= out_reg;
 wire [15:0] start_addr_rd  	= start_addr  & {16{reg_rd[START_ADDR]}};
 wire [15:0] n_words_rd  	= n_words     & {16{reg_rd[N_WORDS]}};
 wire [15:0] config_rd  		= config_reg  & {16{reg_rd[CONFIG]}};
-wire [15:0] data_rd  		= data_reg    & {16{reg_rd[DATA_REG]}};
-wire [15:0] out_rd  		= out_reg     & {16{reg_rd[OUT_REG]}};
+wire [15:0] read_reg_rd		= read_reg    & {16{reg_rd[READ_REG]}};
+wire [15:0] write_reg_rd	= write_reg   & {16{reg_rd[WRITE_REG]}};
 
 wire [15:0] per_dout   		= start_addr_rd  |
 		                      n_words_rd  	 |
 		                      config_rd  	 |
-		                   	  data_rd        |
-		                   	  out_rd;
+		                   	  write_reg_rd   |
+		                   	  read_reg_rd;
 		                      
 //=============================================================
 // 5) DMA Device behaviour
@@ -216,25 +220,27 @@ begin
 end 
 
 // 	Internal Status
-// ---------------------------------------
-// | END_OP	| 0 | ~DEV_ACK | --- | 0 | 0 |
-// ---------------------------------------
-// |  7     | 6 |	 5    | --- | 1 | 0 |
-// ---------------------------------------
+// --------------------------------------------------------
+// | END_OP	| 0 | ~DEV_ACK | 0 | RESET_REGS | 0 | 0 | 0 |
+// --------------------------------------------------------
+// |  7     | 6 |	 5    | 4 |      3      | 2 | 1 | 0 |
+// --------------------------------------------------------
 
 always @(posedge config_reg[START]) begin
 	config_wr_intern   <= 1'b1;	
 	internal_status[7] <= 1'b0;
+	internal_status[3] <= 1'b0;
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
 always @(posedge dma_end_flag) begin
 	config_wr_intern   <= 1'b1;	
 	internal_status[7] <= 1'b1;
+	internal_status[3] <= 1'b1; //reset read and write registers
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
-always @(posedge data_wr & config_reg[NON_ATOMIC]) begin //Autoreset DEV_ACK when reading a datum
+always @(posedge read_reg_wr & config_reg[NON_ATOMIC]) begin //Autoreset DEV_ACK when reading a datum
 	config_wr_intern   <= 1'b1;
 	internal_status[5] <= 1'b1;
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
@@ -247,9 +253,10 @@ always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Set the 
 	@(posedge clk)  config_wr_intern   <= 1'b0;	
 end
 
-assign non_atom_ack = (~internal_status[5] & config_reg[RD_WR]) | out_reg_wr;
+assign non_atom_ack = (~internal_status[5] & config_reg[RD_WR]) | write_reg_wr;
 assign dev_ack   = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
 assign dma_rqst  = config_reg[START];   
 assign dma_rd_wr = config_reg[RD_WR]; // 1: Read | 0: Write
+assign reg_reset = internal_status[3];
 
 endmodule 
