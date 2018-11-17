@@ -383,7 +383,6 @@ always @(state,dma_ready) begin
 			count_rst <= 1'b1;
 			dev_count_rst <= 1'b1;
 			fifo_rst <= 1'b1;
-			fifo_rst <= 1'b1; 
 			msp_count_rst <= 1'b1;
 			old_addr_rst <= 1'b1;
 			words_rst <= 1'b1;
@@ -392,7 +391,9 @@ always @(state,dma_ready) begin
 		begin
 			addr0_rst <= 1'b1;
 			count_rst <= 1'b1;	
+			dev_count_rst <= 1'b1;
 			fifo_rst <= 1'b1;//XXX controlla: secondo me in IDLE ci sta svuotare la FIFO e resettare i WR_ADDR e RD_ADDR, no?
+			msp_count_rst <= 1'b1;
 			words_rst <= 1'b1;
 		end
 		GET_REGS : 
@@ -490,11 +491,11 @@ always @(state,dma_ready) begin
 		begin
 			count_en <= 1'b1;
 			dma_en <= 1'b1;
-			out_to_msp <= 1'b1;
 			dma_we <= 2'b11;
 			drive_dma_addr <= 1'b1;
 			fifo_en <= 1'b1;		
 			old_addr_reg_en <= 1'b1;
+			out_to_msp <= 1'b1;
 		end
 		OLD_ADDR_WR :
 		begin
@@ -508,10 +509,11 @@ always @(state,dma_ready) begin
 		end
 		END_WRITE : 
 		begin
-			out_to_msp <= 1'b1; //to correctly write the last data
 			drive_dma_addr <= 1'b1;
 			end_flag <= 1'b1;
+			out_to_msp <= 1'b1; //to correctly write the last data
 		end
+		
 		// Fifo full
 		// During Read-op
 		WAIT_DEV_ACK : 
@@ -529,8 +531,8 @@ always @(state,dma_ready) begin
 		begin
 			count_rst <= 1'b1;
 			dma_we <= 2'b11;
-			out_to_msp <= 1'b1;
 			drive_dma_addr <= 1'b1;
+			out_to_msp <= 1'b1;
 		end
 		EMPTY_FIFO_WRITE :
 		begin

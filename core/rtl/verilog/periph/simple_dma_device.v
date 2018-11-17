@@ -139,17 +139,17 @@ assign dma_num_words = n_words;
 //-----------------   
 // Only half of the config register is for CPU configuration; the other half is for the device itself. (Sergio)
 //
-localparam START     = 0;
-localparam RD_WR     = 2;
-localparam AUTORESET = 3;
-localparam ACK_SET   = 4;
-localparam END_OP    = 15;
+localparam START      = 0;
+localparam RD_WR      = 2;
+localparam NON_ATOMIC = 3;
+localparam ACK_SET    = 4;
+localparam END_OP     = 15;
 
-// ---------------------------------------------------------------------------
-// | END_OP	| 0 | ~DEV_ACK | ---  |  ACK_SET  | AUTORESET | RD_WR | 0 | START |
-// ---------------------------------------------------------------------------
-// |  15   | 14	|    13    | ---  |     4     |     3     |   2   | 1  |  0   |
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// | END_OP	| 0 | ~DEV_ACK | ---  |  ACK_SET  | NON_ATOMIC | RD_WR | 0 | START |
+// -----------------------------------------------------------------------------
+// |  15   | 14	|    13    | ---  |     4     |     3      |   2   | 1  |  0   |
+// -----------------------------------------------------------------------------
 
 reg  [15:0] config_reg;
 wire        config_wr_ext = reg_wr[CONFIG];
@@ -178,7 +178,7 @@ always @ (posedge clk or posedge reset)
 reg [15:0] out_reg;
 wire out_reg_wr = reg_wr[OUT_REG];
 always @ (posedge clk or posedge reset)
-  if (reset)           out_reg <= 16'hf00d;
+  if (reset)           out_reg <= 16'h0000;
   else if (out_reg_wr) out_reg <= per_din;
   else	               out_reg <= out_reg;
   
@@ -215,13 +215,12 @@ begin
  internal_status <= 'h0;
 end 
 
-// Configuration register - internal flags to CPU.
-// Possibilities to extend the set of flags
-// -------------------------------------
+// 	Internal Status
+// ---------------------------------------
 // | END_OP	| 0 | ~DEV_ACK | --- | 0 | 0 |
-// -------------------------------------
-// |  7     | 6 |	 5   | --- | 1 | 0 |
-// -------------------------------------
+// ---------------------------------------
+// |  7     | 6 |	 5    | --- | 1 | 0 |
+// ---------------------------------------
 
 always @(posedge config_reg[START]) begin
 	config_wr_intern   <= 1'b1;	
@@ -235,20 +234,21 @@ always @(posedge dma_end_flag) begin
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
-always @(posedge data_wr & config_reg[AUTORESET]) begin
-	internal_status[5] <= 1'b1;
+always @(posedge data_wr & config_reg[NON_ATOMIC]) begin //Autoreset DEV_ACK when reading a datum
 	config_wr_intern   <= 1'b1;
+	internal_status[5] <= 1'b1;
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end 
 
-always @(posedge config_reg[ACK_SET] & config_reg[AUTORESET]) begin
+
+always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Set the DEV_ACK
 	internal_status[5] <= 1'b0;
 	config_wr_intern   <= 1'b1;
 	@(posedge clk)  config_wr_intern   <= 1'b0;	
 end
 
-
-assign dev_ack   = config_reg[AUTORESET] ? ~internal_status[5] : 1'b1;
+assign non_atom_ack = (~internal_status[5] & config_reg[RD_WR]) | out_reg_wr;
+assign dev_ack   = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
 assign dma_rqst  = config_reg[START];   
 assign dma_rd_wr = config_reg[RD_WR]; // 1: Read | 0: Write
 
