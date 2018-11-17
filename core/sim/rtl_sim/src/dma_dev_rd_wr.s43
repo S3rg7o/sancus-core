@@ -45,18 +45,18 @@
 .equ DATA_REG	    , 0x0106
 .equ OUT_REG	    , 0x0108
 	    /* --------------     Device instruction set      --------------- */
-.equ WRITE_OP       , 0x0001
-.equ END_WRITE      , 0x8000
+.equ WRITE_OP       , 0x0009
 .equ READ_OP        , 0x0005
 .equ END_READ       , 0x8004
 .equ READ_OP_ACK    , 0x001D
-.equ WAIT_ACK_READ  , 0x200D
+.equ WAIT_READ_ACK  , 0x200D
 .equ END_READ_ACK   , 0xA00C
   
         /* --------------     Values of START_ADD and NUM_WORDS  --------- */
 .set START_ADD      , DMEM_200     ; Starting memory address to be written 
-.set N_WORDS        , 0x0022
-.set OUT_VALUE      , 0xF1D0
+.set N_WORDS        , 0x0002
+.set OUT_VALUE      , 0x1010
+.set count          , N_WORDS
 main:
 
         /* --------------     START TEST: 'write-to-mem' and 'read-from-mem' accesses     --------------- */
@@ -67,27 +67,28 @@ main:
 	   
 	   ; Start of operations
 	   mov    #WRITE_OP  , &CONFIG_REG  ; Setup a write-to-mem op.
-	   mov    #OUT_VALUE , &OUT_REG
-	   mov    #0x0001    , r15          ; Start Write-op
+	   mov    #0x0001    , r15          ; Signal the start of Write-op
 	   
-LOOP1: cmp.w  #END_WRITE , &CONFIG_REG     
-	   jne    LOOP1                    ; loops until end_op.
-	   mov    #0x0002    , r15         ; End of write-op, start read-op
+LOOP1: dec    count
+       xor    #0x1111    , OUT_VALUE
+       mov    #OUT_VALUE , &OUT_REG 
+	   jnz    LOOP1                    ; loops until all words are written.
+	   mov    #0x0002    , r15         ; Signal the end of write-op, and the start of read-op
 	   mov    #READ_OP   , &CONFIG_REG ; Setup a read-from-mem op.
 	   
-LOOP2: cmp.w  #END_READ  , &CONFIG_REG ;      
+LOOP2: cmp.w  #END_READ  , &CONFIG_REG       
 	   jne    LOOP2                    ; loops until end_op.	   
-	   mov    #0x0003    , r15         ; End of read-op
+	   mov    #0x0003    , r15         ; Signal the end of atomic read-op
 	   	   
 SET:   mov    #READ_OP_ACK   , &CONFIG_REG ;   
 END:   cmp.w  #END_READ_ACK  , &CONFIG_REG ;      
 	   jne    WAIT
 	   jeq    EXIT
-WAIT:  cmp.w  #WAIT_ACK_READ , &CONFIG_REG ;      
+WAIT:  cmp.w  #WAIT_READ_ACK , &CONFIG_REG ;      
 	   jeq    SET                          ;
 	   jne    END  
 
-EXIT:  mov    #0x0004        , r15         ; End of read-op
+EXIT:  mov    #0x0004        , r15         ; Signal the end of non-atomic read-op
 	   
 
         /* ----------------------         END OF TEST        --------------- */

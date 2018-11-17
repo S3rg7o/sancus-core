@@ -1,21 +1,20 @@
 [*]
 [*] GTKWave Analyzer v3.3.86 (w)1999-2017 BSI
-[*] Thu Nov 15 20:21:05 2018
+[*] Sat Nov 17 13:12:39 2018
 [*]
 [dumpfile] "/home/sergio/sancus-core/core/sim/rtl_sim/run/tb_openMSP430.vcd"
-[dumpfile_mtime] "Thu Nov 15 20:20:28 2018"
-[dumpfile_size] 3313481
+[dumpfile_mtime] "Sat Nov 17 13:12:25 2018"
+[dumpfile_size] 578286
 [savefile] "/home/sergio/sancus-core/core/sim/rtl_sim/run/tb_openMSP430_dma_dev_rd_wr.gtkw"
-[timestart] 3864000
+[timestart] 3773700
 [size] 1311 704
 [pos] -1 -1
-*-18.889263 4325000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-16.889263 4025000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] tb_openMSP430.
-[treeopen] tb_openMSP430.dma_cntrl.
 [treeopen] tb_openMSP430.dma_dev0.
 [treeopen] tb_openMSP430.dut.
 [sst_width] 233
-[signals_width] 269
+[signals_width] 286
 [sst_expanded] 1
 [sst_vpaned_height] 180
 @22
@@ -56,34 +55,18 @@ tb_openMSP430.dma_dev0.config_reg[15:0]
 tb_openMSP430.dma_dev0.data_reg[15:0]
 tb_openMSP430.dma_dev0.out_reg[15:0]
 @28
+tb_openMSP430.dma_dev0.out_reg_wr
 [color] 2
 tb_openMSP430.dma_cntrl.clk
 @200
 -DMA Controller
-@c00024
-tb_openMSP430.dma_cntrl.count[14:0]
 @28
-(0)tb_openMSP430.dma_cntrl.count[14:0]
-(1)tb_openMSP430.dma_cntrl.count[14:0]
-(2)tb_openMSP430.dma_cntrl.count[14:0]
-(3)tb_openMSP430.dma_cntrl.count[14:0]
-(4)tb_openMSP430.dma_cntrl.count[14:0]
-(5)tb_openMSP430.dma_cntrl.count[14:0]
-(6)tb_openMSP430.dma_cntrl.count[14:0]
-(7)tb_openMSP430.dma_cntrl.count[14:0]
-(8)tb_openMSP430.dma_cntrl.count[14:0]
-(9)tb_openMSP430.dma_cntrl.count[14:0]
-(10)tb_openMSP430.dma_cntrl.count[14:0]
-(11)tb_openMSP430.dma_cntrl.count[14:0]
-(12)tb_openMSP430.dma_cntrl.count[14:0]
-(13)tb_openMSP430.dma_cntrl.count[14:0]
-(14)tb_openMSP430.dma_cntrl.count[14:0]
-@1401200
--group_end
+tb_openMSP430.dma_cntrl.flag_cnt_words
+@22
+tb_openMSP430.dma_cntrl.count[13:0]
 @820
 tb_openMSP430.msp_debug_0.dma_state[255:0]
 @28
-tb_openMSP430.dma_cntrl.fifo_empty_partial
 tb_openMSP430.dma_cntrl.dma_ready
 tb_openMSP430.dma_cntrl.dma_en
 +{tb_openMSP430.dma_cntrl.end_operation} tb_openMSP430.dma_cntrl.end_flag
@@ -91,29 +74,31 @@ tb_openMSP430.dma_cntrl.dma_we[1:0]
 tb_openMSP430.dma_dev0.dma_rqst
 @200
 -DMA - MSP
-@22
-+{tb_openMSP430.dma_cntrl.dma_addr_physical[14:0]} tb_openMSP430.dma_cntrl.dma_addr[14:0]
 @c00022
-tb_openMSP430.dma_addr_logical[15:0]
+tb_openMSP430.dma_cntrl.start_addr[15:0]
 @28
-(0)tb_openMSP430.dma_addr_logical[15:0]
-(1)tb_openMSP430.dma_addr_logical[15:0]
-(2)tb_openMSP430.dma_addr_logical[15:0]
-(3)tb_openMSP430.dma_addr_logical[15:0]
-(4)tb_openMSP430.dma_addr_logical[15:0]
-(5)tb_openMSP430.dma_addr_logical[15:0]
-(6)tb_openMSP430.dma_addr_logical[15:0]
-(7)tb_openMSP430.dma_addr_logical[15:0]
-(8)tb_openMSP430.dma_addr_logical[15:0]
-(9)tb_openMSP430.dma_addr_logical[15:0]
-(10)tb_openMSP430.dma_addr_logical[15:0]
-(11)tb_openMSP430.dma_addr_logical[15:0]
-(12)tb_openMSP430.dma_addr_logical[15:0]
-(13)tb_openMSP430.dma_addr_logical[15:0]
-(14)tb_openMSP430.dma_addr_logical[15:0]
-(15)tb_openMSP430.dma_addr_logical[15:0]
+(0)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(1)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(2)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(3)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(4)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(5)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(6)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(7)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(8)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(9)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(10)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(11)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(12)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(13)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(14)tb_openMSP430.dma_cntrl.start_addr[15:0]
+(15)tb_openMSP430.dma_cntrl.start_addr[15:0]
 @1401200
 -group_end
+@22
+tb_openMSP430.dma_cntrl.dma_addr[14:0]
+@23
+tb_openMSP430.mem_accesed[15:0]
 @c00022
 tb_openMSP430.dma_cntrl.dma_in[15:0]
 @28

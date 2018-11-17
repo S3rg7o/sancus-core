@@ -44,7 +44,11 @@ input [ADD_LEN-1:0] num_words;  // 1) I should be able to write at max. as many 
 								// 2) Or num_words can bigger and let FIFO_FULL FSM-branch handle the situation.It's up to you. +++
 								
 input [ADD_LEN:0] start_addr;
+<<<<<<< HEAD
 //wire [ADD_LEN-1:0] start_addr_shifted = start_addr >> 1;
+=======
+wire [ADD_LEN-1:0] start_addr_shifted = start_addr >> 1; // in the memory backbone it's multiplied by 2, so now I divide it
+>>>>>>> write_change
 
 input rd_wr;
 input rqst;
@@ -99,7 +103,7 @@ reg count_rst, count_en, restore_dev_or_msp, count_load;
 reg msp_count_reg_en, dev_count_rst, msp_count_rst;
 // FSM control logic  
 wire security_violation;
-reg flag_cnt_words, flag_cnt_words_mem; //end-counts for the FSM
+reg flag_cnt_words, flag_cnt_words_read; //end-counts for the FSM
 reg out_to_msp; //1: FIFO out to DMA || 0: FIFO out to DEV
 reg error_flag;  
 reg drive_dma_addr; //0: dma_addr = 'hz || 1: dma_addr
@@ -260,7 +264,7 @@ assign saved_value      = restore_dev_or_msp ? dev_count_saved : msp_count_saved
 
 always @(count,words) begin
 	flag_cnt_words = (count == words-1); 
-	flag_cnt_words_mem = (count == words); // flag count for the read case
+	flag_cnt_words_read = (count == words); // flag count for the read case
 end	
 
 // State Assignment
@@ -272,7 +276,7 @@ always @(posedge clk,posedge reset)	begin
 end
 
 // Next State Generation
-always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, flag_cnt_words_mem, dev_ack, fifo_empty_partial, reset) begin
+always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, flag_cnt_words_read, dev_ack, fifo_empty_partial, reset) begin
 		next_state <= IDLE; // default
 		case (state)
 			RESET :
@@ -288,7 +292,7 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 			READ_MEM :
 				next_state <= dma_resp  ? ERROR : 
 							  fifo_full ? WAIT_DEV_ACK :
-							  flag_cnt_words_mem ? SEND_TO_DEV0 :
+							  flag_cnt_words_read ? SEND_TO_DEV0 :
 							  dma_ready ? READ_MEM : OLD_ADDR_RD;
 			OLD_ADDR_RD : 
 				next_state <= dma_ready ? READ_MEM : OLD_ADDR_RD;
@@ -318,8 +322,11 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= SEND_TO_MEM1;
 			SEND_TO_MEM1 :
 				next_state <= dma_resp ? ERROR : 
-							  flag_cnt_words_mem ? END_WRITE :
-							  dma_ready ? SEND_TO_MEM1 : OLD_ADDR_WR;
+							  //flag_cnt_words ? END_WRITE :
+							  //dma_ready ? SEND_TO_MEM1 : OLD_ADDR_WR;
+							  dma_ready ? (flag_cnt_words ? END_WRITE : SEND_TO_MEM1) : OLD_ADDR_WR;
+			                  
+			
 			OLD_ADDR_WR :
 				next_state <= dma_ready ? SEND_TO_MEM1 : OLD_ADDR_WR ;
 			END_WRITE : 
