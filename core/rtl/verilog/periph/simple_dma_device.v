@@ -137,18 +137,19 @@ assign dma_num_words = n_words;
    
 // CONFIG Register
 //-----------------   
-// Only half of the config register is for CPU configuration; the other half is for the device itself. (Sergio)
+// First half of the config register is for CPU configuration; the other half is set by the device itself. (Sergio)
 //
 localparam START      = 0;
 localparam RD_WR      = 2;
 localparam NON_ATOMIC = 3;
 localparam ACK_SET    = 4;
+localparam RESET_REGS = 5;
 localparam END_OP     = 15;
 
 // ------------------------------------------------------------------------------------------------
-// | END_OP	| 0 | ~DEV_ACK |  0  | RESET_REGS | --- |  ACK_SET  | NON_ATOMIC | RD_WR | 0 | START |
+// | END_OP	| 0 | ~DEV_ACK |  0  | --- | RESET_REGS |  ACK_SET  | NON_ATOMIC | RD_WR | 0 | START |
 // -----------------------------------------------------------------------------------------------
-// |  15   | 14	|    13    | 12  |     11     | --- |     4     |     3      |   2   | 1  |  0   |
+// |  15   | 14	|    13    | 12  | --- |     5      |     4     |     3      |   2   | 1  |  0   |
 // -----------------------------------------------------------------------------------------------
 
 reg  [15:0] config_reg;
@@ -166,8 +167,7 @@ always @ (posedge clk or posedge reset )
 //---------------------------------------   
 reg  [15:0] read_reg;
 wire        read_reg_wr = dma_ack & dma_rqst & dma_rd_wr;
-wire        reg_reset;
-wire		read_reg_reset = reset | reg_reset;
+wire		read_reg_reset = reset | config_reg[RESET_REGS];
 
 always @ (posedge clk or posedge read_reg_reset)
   if (read_reg_reset)            read_reg <=  16'h0000;
@@ -179,7 +179,7 @@ always @ (posedge clk or posedge read_reg_reset)
 //---------------------------------------   
 reg [15:0] write_reg;
 wire write_reg_wr = reg_wr[WRITE_REG];
-wire write_reg_reset = reset | reg_reset;
+wire write_reg_reset = reset | config_reg[RESET_REGS];
 
 always @ (posedge clk or posedge write_reg_reset)
   if (write_reg_reset)   write_reg <= 16'h0000;
@@ -220,28 +220,21 @@ begin
 end 
 
 // 	Internal Status
-// --------------------------------------------------------
-// | END_OP	| 0 | ~DEV_ACK | 0 | RESET_REGS | 0 | 0 | 0 |
-// --------------------------------------------------------
-// |  7     | 6 |	 5    | 4 |      3      | 2 | 1 | 0 |
-// --------------------------------------------------------
+// ---------------------------------------------
+// | END_OP	| 0 | ~DEV_ACK | 0 | 0 | 0 | 0 | 0 |
+// ---------------------------------------------
+// |  7     | 6 |	 5    | 4 |  3 | 2 | 1 | 0 |
+// ---------------------------------------------
 
 always @(posedge config_reg[START]) begin
 	config_wr_intern   <= 1'b1;	
 	internal_status[7] <= 1'b0;
-	internal_status[3] <= 1'b0;
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
 always @(posedge dma_end_flag) begin
 	config_wr_intern   <= 1'b1;	
 	internal_status[7] <= 1'b1;
-	@(posedge clk)  config_wr_intern   <= 1'b0;		
-end
-
-always @(posedge config_reg[END_OP]) begin
-	config_wr_intern   <= 1'b1;	
-	internal_status[3] <= 1'b1; //reset read and write registers
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
@@ -262,6 +255,5 @@ assign non_atom_ack = (~internal_status[5] & config_reg[RD_WR]) | write_reg_wr;
 assign dev_ack   = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
 assign dma_rqst  = config_reg[START];   
 assign dma_rd_wr = config_reg[RD_WR]; // 1: Read | 0: Write
-assign reg_reset = internal_status[3];
 
 endmodule 
