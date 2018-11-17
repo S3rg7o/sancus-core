@@ -236,6 +236,11 @@ end
 always @(posedge dma_end_flag) begin
 	config_wr_intern   <= 1'b1;	
 	internal_status[7] <= 1'b1;
+	@(posedge clk)  config_wr_intern   <= 1'b0;		
+end
+
+always @(posedge config_reg[END_OP]) begin
+	config_wr_intern   <= 1'b1;	
 	internal_status[3] <= 1'b1; //reset read and write registers
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
