@@ -90,7 +90,7 @@ assign fifo_addr = fifo_old_add_flag ? fifo_old_addr :
 					(fifo_wr_rd) ? wr_addr : rd_addr; 
 
 //Decoder for enabling the right register
-assign decoder_en = fifo_enable & ~(full & fifo_wr_rd) & ~(empty & ~fifo_wr_rd);
+assign decoder_en = fifo_enable & ~(full & fifo_wr_rd) & ~(empty & ~fifo_wr_rd & ~fifo_old_add_flag);
 decoder #(.DIM(ADDR_SIZE)) address_decoder (.bin_in(fifo_addr), 
 											.en(decoder_en),
 											.out(en_wire));

@@ -209,7 +209,7 @@ register #(.REG_DEPTH(ADD_LEN)) word0 (
 register #(.REG_DEPTH(ADD_LEN)) addr0 (
 				.clk(clk),
 				.reg_en(addr0_reg_en),
-				.data_in(start_addr[14:0]),
+				.data_in(start_addr_shifted),
 				.rst(addr0_rst),
 				.data_out(start_address));
 				
@@ -260,7 +260,7 @@ assign saved_value      = restore_dev_or_msp ? dev_count_saved : msp_count_saved
 
 
 always @(count,words) begin
-	flag_cnt_words = (count == words-1); 
+	flag_cnt_words = (count >= words-1); 
 	flag_cnt_words_read = (count == words); // flag count for the read case
 end	
 
