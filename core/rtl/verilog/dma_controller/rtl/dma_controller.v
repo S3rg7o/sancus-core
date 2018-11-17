@@ -321,11 +321,9 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= dma_resp ? ERROR : 
 							  //flag_cnt_words ? END_WRITE :
 							  //dma_ready ? SEND_TO_MEM1 : OLD_ADDR_WR;
-							  dma_ready ? (flag_cnt_words ? END_WRITE : SEND_TO_MEM1) : OLD_ADDR_WR;
-			                  
-			
+							  dma_ready ? (flag_cnt_words ? END_WRITE : SEND_TO_MEM1) : OLD_ADDR_WR;	
 			OLD_ADDR_WR :
-				next_state <= dma_ready ? SEND_TO_MEM1 : OLD_ADDR_WR ;
+				next_state <= dma_ready ? (flag_cnt_words ? END_WRITE : SEND_TO_MEM1) : OLD_ADDR_WR;
 			END_WRITE : 
 				next_state <= IDLE;
 			// Fifo full
