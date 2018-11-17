@@ -43,8 +43,8 @@ input [ADD_LEN-1:0] num_words;  // 1) I should be able to write at max. as many 
 								// which you write onto FIFO_DEPTH bits.
 								// 2) Or num_words can bigger and let FIFO_FULL FSM-branch handle the situation.It's up to you. +++
 								
-input [ADD_LEN:0] start_addr; // It needs to have one bit more of the address since the device driving the DMA_Controller will address LOGICAL Addresses, therefore it's the DMA that will operate the 1-bit right shift and address the PHYSICAL Mem. Address
-wire [ADD_LEN-1:0] start_addr_shifted = start_addr >> 1;
+input [ADD_LEN:0] start_addr;
+//wire [ADD_LEN-1:0] start_addr_shifted = start_addr >> 1;
 
 input rd_wr;
 input rqst;
@@ -208,7 +208,7 @@ register #(.REG_DEPTH(ADD_LEN)) word0 (
 register #(.REG_DEPTH(ADD_LEN)) addr0 (
 				.clk(clk),
 				.reg_en(addr0_reg_en),
-				.data_in(start_addr_shifted),
+				.data_in(start_addr[14:0]),
 				.rst(addr0_rst),
 				.data_out(start_address));
 				

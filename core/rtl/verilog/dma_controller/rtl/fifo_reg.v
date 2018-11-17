@@ -29,7 +29,7 @@ output flag;
 
 assign flag = register[REG_DEPTH];
 
-always @(rst)
+always @(posedge rst)
 begin
 	if(rst) begin register = 0; end
 end	
