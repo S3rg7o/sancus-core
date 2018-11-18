@@ -557,10 +557,12 @@ always @(dma_cntrl_state)
 		15	: dma_state   = "SEND_TO_MEM1";
 		16	: dma_state   = "OLD_ADDR_WR";
 		17	: dma_state   = "END_WRITE";
-		18	: dma_state   = "WAIT_DEV_ACK";
+		26  : dma_state   = "FIFO_FULL_RD";
+		18	: dma_state   = "WAIT_DEV";
 		19	: dma_state   = "EMPTY_FIFO_READ";
+		25  : dma_state   = "RESTORE_MSP_COUNT";
 		20	: dma_state   = "RESET";      	
-		21  : dma_state   = "WAIT_MSP";
+		21  : dma_state   = "FIFO_FULL_WR";
 		22  : dma_state   = "EMPTY_FIFO_WRITE";
 		23  : dma_state   = "OLD_ADDR_EMP_FIFO_W";	
 		24  : dma_state   = "RESTORE_DEV_COUNT";

@@ -71,24 +71,31 @@ output reg [1:0] dma_we;
 //  Internal variables and wires  //
 //--------------------------------//
 //--------------------------------//
+
 // Fifo
+//-----------------------------
 wire fifo_full, fifo_empty, fifo_empty_partial;
 wire [DATA_LEN-1:0] fifo_out, fifo_in;
 reg fifo_rst, fifo_old_add_flag;
 reg fifo_en, fifo_wr_rd;
 // Address register 
+//-----------------------------
 wire [ADD_LEN-1:0] start_address;
 wire [ADD_LEN-1:0] address;
 reg addr0_rst, addr0_reg_en;
 // Old Address register
+//-----------------------------
 wire [ADD_LEN-1:0] old_address;
 reg old_addr_reg_en, old_addr_rst;
 // Flip-flop Mux Add
+//-----------------------------
 reg mux;
 // Num_words register
+//-----------------------------
 wire [ADD_LEN-1:0] words;
 reg words_rst, words_reg_en;
 // Counter
+//-----------------------------
 wire end_count;
 wire [ADD_LEN-2:0] count;	
 wire [ADD_LEN-2:0] dev_count_saved;
@@ -97,8 +104,10 @@ wire [ADD_LEN-2:0] saved_value;
 wire [FIFO_DEPTH-1:0] count_in;	
 wire dev_count_reg_en;
 reg count_rst, count_en, restore_dev_or_msp, count_load;
-reg msp_count_reg_en, dev_count_rst, msp_count_rst;
+reg msp_count_reg_en_f, dev_count_reg_en_f; //flags to enable counter saving when handling FIFO FULL  
+reg dev_count_rst, msp_count_rst;
 // FSM control logic  
+//-----------------------------
 wire security_violation;
 reg flag_cnt_words, flag_cnt_words_mem; //end-counts for the FSM
 reg out_to_msp; //1: FIFO out to DMA || 0: FIFO out to DEV
@@ -133,10 +142,10 @@ localparam 	IDLE  = "IDLE",
 			OLD_ADDR_WR  = "OLD_ADDR_WR",
 			END_WRITE  = "END_WRITE",
 			// Fifo full 
-			WAIT_DEV_ACK  = "WAIT_DEV_ACK",
+			FIFO_FULL_RD  = "FIFO_FULL_RD",
 			EMPTY_FIFO_READ  = "EMPTY_FIFO_READ",
 			RESET  = "RESET",
-			WAIT_MSP  = "WAIT_MSP",
+			FIFO_FULL_WR  = "FIFO_FULL_WR",
 			EMPTY_FIFO_WRITE  = "EMPTY_FIFO_WRITE",
 			OLD_ADDR_EMP_FIFO_W = "OLD_ADDR_EMP_FIFO_W",
 			RESTORE_DEV_COUNT = "RESTORE_DEV_COUNT";
@@ -162,13 +171,16 @@ localparam 	IDLE  = 0,
 			OLD_ADDR_WR  = 16,
 			END_WRITE  = 17,
 			// Fifo full
-			WAIT_DEV_ACK  = 18,
+			FIFO_FULL_RD = 26,
+			WAIT_DEV  = 18,
 			EMPTY_FIFO_READ  = 19,
-			RESET  = 20,
-			WAIT_MSP  = 21,
+			RESTORE_MSP_COUNT = 25,
+			//
+			FIFO_FULL_WR  = 21,
 			EMPTY_FIFO_WRITE  = 22,
 			OLD_ADDR_EMP_FIFO_W = 23,
-			RESTORE_DEV_COUNT = 24;	
+			RESTORE_DEV_COUNT = 24,
+			RESET  = 20;	
 `endif
 
 //--------------------------------//
@@ -254,7 +266,8 @@ register #(.REG_DEPTH(ADD_LEN-1)) msp_count_reg (
 	.data_out(msp_count_saved));
 	
 	
-assign dev_count_reg_en = (state == READ_DEV1) & fifo_full;
+assign dev_count_reg_en = (state == READ_DEV1) & fifo_full | dev_count_reg_en_f;
+assign msp_count_reg_en = (state == READ_MEM)  & fifo_full | msp_count_reg_en_f;
 assign saved_value      = restore_dev_or_msp ? dev_count_saved : msp_count_saved;
 
 
@@ -288,7 +301,7 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= dma_ready ? READ_MEM : LOAD_DMA_ADD;
 			READ_MEM :
 				next_state <= dma_resp  ? ERROR : 
-							  fifo_full ? WAIT_DEV_ACK :
+							  fifo_full ? FIFO_FULL_RD :
 							  flag_cnt_words_mem ? SEND_TO_DEV0 :
 							  dma_ready ? READ_MEM : OLD_ADDR_RD;
 			OLD_ADDR_RD : 
@@ -311,7 +324,7 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= dev_ack ? READ_DEV1 : READ_DEV0;
 			READ_DEV1 :
 				next_state <= flag_cnt_words ? SEND_TO_MEM0 : 
-							  dev_ack ? (fifo_full ? WAIT_MSP : READ_DEV1) : 
+							  dev_ack ? (fifo_full ? FIFO_FULL_WR : READ_DEV1) : 
 							  WAIT_WRITE;
 			WAIT_WRITE :
 				next_state <= dev_ack ? READ_DEV1 : WAIT_WRITE;
@@ -328,13 +341,17 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= IDLE;
 			// Fifo full
 			// During Read-op
-			WAIT_DEV_ACK : 
-				next_state <= dev_ack ? EMPTY_FIFO_READ : WAIT_DEV_ACK;
+			FIFO_FULL_RD: 
+				next_state <= WAIT_DEV;
+			WAIT_DEV : 
+				next_state <= dev_ack ? EMPTY_FIFO_READ : WAIT_DEV;
 			EMPTY_FIFO_READ :
-			    next_state <= fifo_empty_partial ? READ_MEM : 
-						      dev_ack ? EMPTY_FIFO_READ : WAIT_DEV_ACK;
+			    next_state <= fifo_empty_partial ? RESTORE_MSP_COUNT : 
+						      dev_ack ? EMPTY_FIFO_READ : WAIT_DEV;
+			RESTORE_MSP_COUNT : 
+				next_state <= READ_MEM;
 			//During Write-op						      
-			WAIT_MSP :
+			FIFO_FULL_WR :
 				next_state <= EMPTY_FIFO_WRITE;
 			EMPTY_FIFO_WRITE :
 				next_state <= dma_resp ? ERROR : 
@@ -357,6 +374,7 @@ always @(state,dma_ready) begin
 	count_load <= 1'b0;
 	count_rst <= 1'b0;
 	dev_count_rst <= 1'b0;
+	dev_count_reg_en_f <= 1'b0;
 	dma_ack <= 1'b0;
 	dma_en <= 1'b0;
 	out_to_msp <= 1'b0;
@@ -369,7 +387,7 @@ always @(state,dma_ready) begin
 	fifo_rst <= 1'b0;
 	fifo_wr_rd <= 1'b0;
 	fifo_old_add_flag <= 1'b0;
-	msp_count_reg_en <= 1'b0;
+	msp_count_reg_en_f <= 1'b0;
 	msp_count_rst <= 1'b0;
 	mux <= 1'b0;
 	old_addr_reg_en <= 1'b0;
@@ -518,18 +536,28 @@ always @(state,dma_ready) begin
 		
 		// Fifo full
 		// During Read-op
-		WAIT_DEV_ACK : 
+		FIFO_FULL_RD: 
 		begin
-			//dma_ack <= 1'b1;
-			//dma_en <= 1'b1;
+			count_rst <= 1'b1;
+		end
+		WAIT_DEV : 
+		begin
+			// dummy status required since the reading is on 3 clock edges
 		end
 		EMPTY_FIFO_READ :
 		begin
-			dma_ack <= 1'b1;
-			fifo_en <= 1'b1;
+			count_en <= 1'b1;
+			dma_ack  <= 1'b1;
+			fifo_en  <= 1'b1;
+		end
+		RESTORE_MSP_COUNT : 
+		begin
+			count_en <= 1'b1; //enable to allow the loading
+			count_load <= 1'b1;
+			dev_count_reg_en_f <= 1'b1;
 		end
 		// During Write-op
-		WAIT_MSP :
+		FIFO_FULL_WR :
 		begin
 			count_rst <= 1'b1;
 			dma_we <= 2'b11;
@@ -560,7 +588,7 @@ always @(state,dma_ready) begin
 		begin
 			count_en <= 1'b1; //enable to allow the loading
 			count_load <= 1'b1;
-			msp_count_reg_en <= 1'b1;
+			msp_count_reg_en_f <= 1'b1;
 			restore_dev_or_msp <= 1'b1;
 		end
 		endcase	
