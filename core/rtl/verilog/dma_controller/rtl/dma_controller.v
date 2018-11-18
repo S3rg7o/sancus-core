@@ -266,7 +266,8 @@ register #(.REG_DEPTH(ADD_LEN-1)) msp_count_reg (
 	.data_out(msp_count_saved));
 	
 	
-assign dev_count_reg_en = (state == READ_DEV1) & fifo_full | dev_count_reg_en_f;
+//assign dev_count_reg_en = (state == READ_DEV1) & fifo_full | dev_count_reg_en_f;
+assign dev_count_reg_en = (state == WAIT_WRITE) & fifo_full | dev_count_reg_en_f;
 assign msp_count_reg_en = (state == READ_MEM)  & fifo_full | msp_count_reg_en_f;
 assign saved_value      = load_dev_or_msp ? dev_count_saved : msp_count_saved;
 
@@ -324,10 +325,9 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= dev_ack ? READ_DEV1 : READ_DEV0;
 			READ_DEV1 :
 				next_state <= flag_cnt_words ? SEND_TO_MEM0 : 
-							  dev_ack ? (fifo_full ? FIFO_FULL_WR : READ_DEV1) : 
-							  WAIT_WRITE;
+							  dev_ack ? (fifo_full ? FIFO_FULL_WR : READ_DEV1) : WAIT_WRITE;
 			WAIT_WRITE :
-				next_state <= dev_ack ? READ_DEV1 : WAIT_WRITE;
+				next_state <= dev_ack ? (fifo_full ? FIFO_FULL_WR : READ_DEV1) : WAIT_WRITE;
 			SEND_TO_MEM0 :
 				next_state <= SEND_TO_MEM1;
 			SEND_TO_MEM1 :
