@@ -146,11 +146,11 @@ localparam ACK_SET    = 4;
 localparam RESET_REGS = 5;
 localparam END_OP     = 15;
 
-// ------------------------------------------------------------------------------------------------
-// | END_OP	| 0 | ~DEV_ACK |  0  | --- | RESET_REGS |  ACK_SET  | NON_ATOMIC | RD_WR | 0 | START |
-// -----------------------------------------------------------------------------------------------
-// |  15   | 14	|    13    | 12  | --- |     5      |     4     |     3      |   2   | 1  |  0   |
-// -----------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------
+// | END_OP	| 0 | ~DEV_ACK |  0  | WRITE_OK | --- | RESET_REGS |  ACK_SET  | NON_ATOMIC | RD_WR | 0 | START |
+// -----------------------------------------------------------------------------------------------------------
+// |  15   | 14	|    13    | 12  |    11    | --- |     5      |     4     |     3      |   2   | 1  |  0   |
+// -----------------------------------------------------------------------------------------------------------
 
 reg  [15:0] config_reg;
 wire        config_wr_ext = reg_wr[CONFIG];
@@ -220,15 +220,31 @@ begin
 end 
 
 // 	Internal Status
-// ---------------------------------------------
-// | END_OP	| 0 | ~DEV_ACK | 0 | 0 | 0 | 0 | 0 |
-// ---------------------------------------------
-// |  7     | 6 |	 5    | 4 |  3 | 2 | 1 | 0 |
-// ---------------------------------------------
+// ----------------------------------------------------
+// | END_OP	| 0 | ~DEV_ACK | 0 | WRITE_OK | 0 | 0 | 0 |
+// ----------------------------------------------------
+// |  7     | 6 |	 5    | 4 |     3     | 2 | 1 | 0 |
+// ----------------------------------------------------
+
+always @(posedge write_reg_wr) begin
+  	config_wr_intern   <= 1'b1;	
+	internal_status[3] <= 1'b0; //wait for dma_ack
+	@(posedge clk)  config_wr_intern   <= 1'b0;		
+end
+
+always @(posedge dma_ack & ~config_reg[RD_WR]) begin
+  	config_wr_intern   <= 1'b1;	
+	internal_status[3] <= 1'b1; //trigger next read 
+	@(posedge clk)  config_wr_intern   <= 1'b0;		
+end
+
+
 
 always @(posedge config_reg[START]) begin
 	config_wr_intern   <= 1'b1;	
 	internal_status[7] <= 1'b0;
+	internal_status[5] <= 1'b0;
+	internal_status[3] <= ~config_reg[RD_WR];
 	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
@@ -246,8 +262,8 @@ end
 
 
 always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Set the DEV_ACK
-	internal_status[5] <= 1'b0;
 	config_wr_intern   <= 1'b1;
+	internal_status[5] <= 1'b0;
 	@(posedge clk)  config_wr_intern   <= 1'b0;	
 end
 
