@@ -103,7 +103,7 @@ wire [ADD_LEN-2:0] msp_count_saved;
 wire [ADD_LEN-2:0] saved_value;
 wire [FIFO_DEPTH-1:0] count_in;	
 wire dev_count_reg_en;
-reg count_rst, count_en, restore_dev_or_msp, count_load;
+reg count_rst, count_en, load_dev_or_msp, count_load;
 reg msp_count_reg_en_f, dev_count_reg_en_f; //flags to enable counter saving when handling FIFO FULL  
 reg dev_count_rst, msp_count_rst;
 // FSM control logic  
@@ -268,7 +268,7 @@ register #(.REG_DEPTH(ADD_LEN-1)) msp_count_reg (
 	
 assign dev_count_reg_en = (state == READ_DEV1) & fifo_full | dev_count_reg_en_f;
 assign msp_count_reg_en = (state == READ_MEM)  & fifo_full | msp_count_reg_en_f;
-assign saved_value      = restore_dev_or_msp ? dev_count_saved : msp_count_saved;
+assign saved_value      = load_dev_or_msp ? dev_count_saved : msp_count_saved;
 
 
 
@@ -392,7 +392,7 @@ always @(state,dma_ready) begin
 	mux <= 1'b0;
 	old_addr_reg_en <= 1'b0;
 	old_addr_rst <= 1'b0;
-	restore_dev_or_msp <= 1'b0;
+	load_dev_or_msp <= 1'b0;
 	words_reg_en <= 1'b0;
 	words_rst <= 1'b0;
 	
@@ -456,7 +456,9 @@ always @(state,dma_ready) begin
 		end
 		SEND_TO_DEV0 : 
 		begin
-			count_rst <= 1'b1;
+			count_en <= 1'b1; //enable to allow the loading
+			count_load <= 1'b1;
+			load_dev_or_msp <= 1'b1;
 			`ifdef SIM 
 			dma_ack <= 1'b1; // to signal to DEV that the rqst has been aquired
 			`endif
@@ -538,7 +540,9 @@ always @(state,dma_ready) begin
 		// During Read-op
 		FIFO_FULL_RD: 
 		begin
-			count_rst <= 1'b1;
+			count_en <= 1'b1;  //load dev counter
+			count_load <= 1'b1;
+			load_dev_or_msp <= 1'b1;
 		end
 		WAIT_DEV : 
 		begin
@@ -552,14 +556,17 @@ always @(state,dma_ready) begin
 		end
 		RESTORE_MSP_COUNT : 
 		begin
-			count_en <= 1'b1; //enable to allow the loading
+			count_en <= 1'b1;  //enable to allow the loading
 			count_load <= 1'b1;
-			dev_count_reg_en_f <= 1'b1;
+			dev_count_reg_en_f <= 1'b1; //save current dev count
+			//load_dev_or_msp <= 1'b0;
 		end
 		// During Write-op
 		FIFO_FULL_WR :
 		begin
-			count_rst <= 1'b1;
+			count_en <= 1'b1;  //load msp counter
+			count_load <= 1'b1;
+			//load_dev_or_msp <= 1'b0;
 			dma_we <= 2'b11;
 			drive_dma_addr <= 1'b1;
 			out_to_msp <= 1'b1;
@@ -589,7 +596,7 @@ always @(state,dma_ready) begin
 			count_en <= 1'b1; //enable to allow the loading
 			count_load <= 1'b1;
 			msp_count_reg_en_f <= 1'b1;
-			restore_dev_or_msp <= 1'b1;
+			load_dev_or_msp <= 1'b1;
 		end
 		endcase	
 end
