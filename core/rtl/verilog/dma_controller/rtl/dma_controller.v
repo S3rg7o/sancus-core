@@ -349,16 +349,17 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 			    next_state <= fifo_empty_partial ? RESTORE_MSP_COUNT : 
 						      dev_ack ? EMPTY_FIFO_READ : WAIT_DEV;
 			RESTORE_MSP_COUNT : 
-				next_state <= READ_MEM;
+				//next_state <= READ_MEM;
+				next_state <= flag_cnt_words_mem ? SEND_TO_DEV0 :
+							  dma_ready ? READ_MEM : OLD_ADDR_RD;
 			//During Write-op						      
 			FIFO_FULL_WR :
 				next_state <= EMPTY_FIFO_WRITE;
 			EMPTY_FIFO_WRITE :
 				next_state <= dma_resp ? ERROR : 
-							  fifo_empty_partial ? RESTORE_DEV_COUNT :
-							  dma_ready ? EMPTY_FIFO_WRITE : OLD_ADDR_EMP_FIFO_W;
+							  dma_ready ? ( fifo_empty_partial ? RESTORE_DEV_COUNT : EMPTY_FIFO_WRITE ) : OLD_ADDR_EMP_FIFO_W;
 			OLD_ADDR_EMP_FIFO_W :
-				next_state <= dma_ready ? EMPTY_FIFO_WRITE : OLD_ADDR_EMP_FIFO_W ;
+				next_state <= dma_ready ? ( fifo_empty_partial ? RESTORE_DEV_COUNT : EMPTY_FIFO_WRITE ) : OLD_ADDR_EMP_FIFO_W ;
 			RESTORE_DEV_COUNT : 
 				next_state <= READ_DEV1;
 						      
