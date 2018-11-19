@@ -89,7 +89,7 @@ wire [ADD_LEN-1:0] old_address;
 reg old_addr_reg_en, old_addr_rst;
 // Flip-flop Mux Add
 //-----------------------------
-reg mux;
+reg mux_old_addr;
 // Num_words register
 //-----------------------------
 wire [ADD_LEN-1:0] words;
@@ -105,7 +105,7 @@ wire [FIFO_DEPTH-1:0] count_in;
 wire dev_count_reg_en;
 reg count_rst, count_en, load_dev_or_msp, count_load;
 reg msp_count_reg_en_f, dev_count_reg_en_f; //flags to enable counter saving when handling FIFO FULL  
-reg dev_count_rst, msp_count_rst;
+reg dev_count_rst, msp_count_rst, mux_msp_count;
 // FSM control logic  
 //-----------------------------
 wire security_violation;
@@ -227,14 +227,14 @@ register #(.REG_DEPTH(ADD_LEN)) addr0 (
 				
 register #(.REG_DEPTH(ADD_LEN)) old_addr0 (
 				.clk(clk),
-				.reg_en(old_addr_reg_en),
+				.reg_en(old_addr_reg_en & ~msp_count_reg_en),
 				.data_in(address),
 				.rst(old_addr_rst),
 				.data_out(old_address));
 
 								
 assign address = start_address + count;
-assign dma_addr = drive_dma_addr ? ( mux ? old_address : address) :
+assign dma_addr = drive_dma_addr ? ( mux_old_addr ? old_address : address) :
 					{ADD_LEN{1'bz}};// {1'b0}}; XXX: puoi mettere 1'b0 per questioni estetiche, 
 					                // meno rosso a schermo. Funziona in entrambi i modi, però 
 					                // personalmente sia meglio avere un indirizzo in alta impedenza 
@@ -257,6 +257,10 @@ register #(.REG_DEPTH(ADD_LEN-1)) dev_count_reg (
 	.data_in(count),
 	.rst(dev_count_rst),
 	.data_out(dev_count_saved));
+
+wire [ADD_LEN-1:0] old_count         = old_address - start_address;
+wire [ADD_LEN-1:0] count_to_save_msp = mux_msp_count ? count : old_count;
+
 
 register #(.REG_DEPTH(ADD_LEN-1)) msp_count_reg (
 	.clk(clk),
@@ -297,6 +301,8 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 			GET_REGS : 
 				next_state <= rd_wr ? (security_violation ? END_READ : LOAD_DMA_ADD) : 
 							  (security_violation ? END_WRITE : READ_DEV0);
+							  
+							  
 			// Read 
 			LOAD_DMA_ADD :
 				next_state <= dma_ready ? READ_MEM : LOAD_DMA_ADD;
@@ -320,6 +326,19 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= dev_ack ? SEND_TO_DEV1 : NOP;
 			END_READ :
 				next_state <= IDLE;
+			// Fifo full during Read-op
+			FIFO_FULL_RD: 
+				next_state <= WAIT_DEV;
+			WAIT_DEV : 
+				next_state <= dev_ack ? EMPTY_FIFO_READ : WAIT_DEV;
+			EMPTY_FIFO_READ :
+			    next_state <= fifo_empty_partial ? RESTORE_MSP_COUNT : 
+						      dev_ack ? EMPTY_FIFO_READ : WAIT_DEV;
+			RESTORE_MSP_COUNT : 
+				next_state <= flag_cnt_words_mem ? SEND_TO_DEV0 :
+							  dma_ready ? READ_MEM : OLD_ADDR_RD;
+							  
+							  		
 			// Write
 			READ_DEV0 :
 				next_state <= dev_ack ? READ_DEV1 : READ_DEV0;
@@ -339,20 +358,7 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= dma_ready ? (flag_cnt_words_mem ? END_WRITE : SEND_TO_MEM1) : OLD_ADDR_WR;
 			END_WRITE : 
 				next_state <= IDLE;
-			// Fifo full
-			// During Read-op
-			FIFO_FULL_RD: 
-				next_state <= WAIT_DEV;
-			WAIT_DEV : 
-				next_state <= dev_ack ? EMPTY_FIFO_READ : WAIT_DEV;
-			EMPTY_FIFO_READ :
-			    next_state <= fifo_empty_partial ? RESTORE_MSP_COUNT : 
-						      dev_ack ? EMPTY_FIFO_READ : WAIT_DEV;
-			RESTORE_MSP_COUNT : 
-				//next_state <= READ_MEM;
-				next_state <= flag_cnt_words_mem ? SEND_TO_DEV0 :
-							  dma_ready ? READ_MEM : OLD_ADDR_RD;
-			//During Write-op						      
+			//Fifo_full during Write-op						      
 			FIFO_FULL_WR :
 				next_state <= EMPTY_FIFO_WRITE;
 			EMPTY_FIFO_WRITE :
@@ -390,7 +396,8 @@ always @(state,dma_ready) begin
 	fifo_old_add_flag <= 1'b0;
 	msp_count_reg_en_f <= 1'b0;
 	msp_count_rst <= 1'b0;
-	mux <= 1'b0;
+	mux_old_addr <= 1'b0;
+	mux_msp_count <= 1'b0;
 	old_addr_reg_en <= 1'b0;
 	old_addr_rst <= 1'b0;
 	load_dev_or_msp <= 1'b0;
@@ -425,7 +432,10 @@ always @(state,dma_ready) begin
 			dma_ack <= 1'b1; // signal "rqst aquired" to DEV
 			`endif
 		end
-		// Read 
+		
+		// =============
+		//     Read
+		// =============
 		LOAD_DMA_ADD :  
 		begin
 			count_en <= 1'b1 & dma_ready;
@@ -448,7 +458,7 @@ always @(state,dma_ready) begin
 			drive_dma_addr <= 1'b1;
 			fifo_old_add_flag <= 1'b1;
 			fifo_wr_rd <= 1'b1;
-			mux <= 1'b1;
+			mux_old_addr <= 1'b1;
 		end
 		ERROR :
 		begin
@@ -482,7 +492,34 @@ always @(state,dma_ready) begin
 		begin
 			end_flag <= 1'b1;
 		end
-		// Write
+		// Fifo full during Read-op
+		FIFO_FULL_RD: 
+		begin
+			count_en <= 1'b1;  //load dev counter
+			count_load <= 1'b1;
+			load_dev_or_msp <= 1'b1;
+		end
+		WAIT_DEV : 
+		begin
+			// dummy status required since the reading is on 3 clock edges
+		end
+		EMPTY_FIFO_READ :
+		begin
+			count_en <= 1'b1;
+			dma_ack  <= 1'b1;
+			fifo_en  <= 1'b1;
+		end
+		RESTORE_MSP_COUNT : 
+		begin
+			count_en <= 1'b1;  //enable to allow the loading
+			count_load <= 1'b1;
+			dev_count_reg_en_f <= 1'b1; //save current dev count
+			//load_dev_or_msp <= 1'b0;
+		end
+		
+		// =============
+		//    Write
+		// =============
 		READ_DEV0 :
 		begin
 			out_to_msp <= 1'b1;
@@ -527,7 +564,7 @@ always @(state,dma_ready) begin
 			drive_dma_addr <= 1'b1;
 			fifo_en <= 1'b1;
 			fifo_old_add_flag <= 1'b1;
-			mux <= 1'b1; 
+			mux_old_addr <= 1'b1; 
 			out_to_msp <= 1'b1;
 		end
 		END_WRITE : 
@@ -537,32 +574,7 @@ always @(state,dma_ready) begin
 			out_to_msp <= 1'b1; //to correctly write the last data
 		end
 		
-		// Fifo full
-		// During Read-op
-		FIFO_FULL_RD: 
-		begin
-			count_en <= 1'b1;  //load dev counter
-			count_load <= 1'b1;
-			load_dev_or_msp <= 1'b1;
-		end
-		WAIT_DEV : 
-		begin
-			// dummy status required since the reading is on 3 clock edges
-		end
-		EMPTY_FIFO_READ :
-		begin
-			count_en <= 1'b1;
-			dma_ack  <= 1'b1;
-			fifo_en  <= 1'b1;
-		end
-		RESTORE_MSP_COUNT : 
-		begin
-			count_en <= 1'b1;  //enable to allow the loading
-			count_load <= 1'b1;
-			dev_count_reg_en_f <= 1'b1; //save current dev count
-			//load_dev_or_msp <= 1'b0;
-		end
-		// During Write-op
+		// Fifo full during Write-op
 		FIFO_FULL_WR :
 		begin
 			count_en <= 1'b1;  //load msp counter
@@ -589,7 +601,7 @@ always @(state,dma_ready) begin
 			drive_dma_addr <= 1'b1;
 			fifo_en <= 1'b1;
 			fifo_old_add_flag <= 1'b1;
-			mux <= 1'b1; 
+			mux_old_addr <= 1'b1; 
 			out_to_msp <= 1'b1;
 		end
 		RESTORE_DEV_COUNT : 
@@ -597,6 +609,8 @@ always @(state,dma_ready) begin
 			count_en <= 1'b1; //enable to allow the loading
 			count_load <= 1'b1;
 			msp_count_reg_en_f <= 1'b1;
+			mux_msp_count <= 1'b1; // because in this case you save the current msp_counter; in all 
+								   // the other you save the old counter 
 			load_dev_or_msp <= 1'b1;
 		end
 		endcase	
