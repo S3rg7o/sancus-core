@@ -105,7 +105,7 @@ wire [FIFO_DEPTH-1:0] count_in;
 wire dev_count_reg_en;
 reg count_rst, count_en, load_dev_or_msp, count_load;
 reg msp_count_reg_en_f, dev_count_reg_en_f; //flags to enable counter saving when handling FIFO FULL  
-reg dev_count_rst, msp_count_rst, mux_msp_count;
+reg dev_count_rst, msp_count_rst;
 // FSM control logic  
 //-----------------------------
 wire security_violation;
@@ -258,10 +258,6 @@ register #(.REG_DEPTH(ADD_LEN-1)) dev_count_reg (
 	.rst(dev_count_rst),
 	.data_out(dev_count_saved));
 
-wire [ADD_LEN-1:0] old_count         = old_address - start_address;
-wire [ADD_LEN-1:0] count_to_save_msp = mux_msp_count ? count : old_count;
-
-
 register #(.REG_DEPTH(ADD_LEN-1)) msp_count_reg (
 	.clk(clk),
 	.reg_en(msp_count_reg_en),
@@ -301,9 +297,9 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 			GET_REGS : 
 				next_state <= rd_wr ? (security_violation ? END_READ : LOAD_DMA_ADD) : 
 							  (security_violation ? END_WRITE : READ_DEV0);
-							  
-							  
-			// Read 
+			// =============
+			//     Read
+			// ============= 
 			LOAD_DMA_ADD :
 				next_state <= dma_ready ? READ_MEM : LOAD_DMA_ADD;
 			READ_MEM :
@@ -337,9 +333,9 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 			RESTORE_MSP_COUNT : 
 				next_state <= flag_cnt_words_mem ? SEND_TO_DEV0 :
 							  dma_ready ? READ_MEM : OLD_ADDR_RD;
-							  
-							  		
-			// Write
+			// =============
+			//    Write
+			// =============
 			READ_DEV0 :
 				next_state <= dev_ack ? READ_DEV1 : READ_DEV0;
 			READ_DEV1 :
@@ -397,7 +393,6 @@ always @(state,dma_ready) begin
 	msp_count_reg_en_f <= 1'b0;
 	msp_count_rst <= 1'b0;
 	mux_old_addr <= 1'b0;
-	mux_msp_count <= 1'b0;
 	old_addr_reg_en <= 1'b0;
 	old_addr_rst <= 1'b0;
 	load_dev_or_msp <= 1'b0;
@@ -609,8 +604,6 @@ always @(state,dma_ready) begin
 			count_en <= 1'b1; //enable to allow the loading
 			count_load <= 1'b1;
 			msp_count_reg_en_f <= 1'b1;
-			mux_msp_count <= 1'b1; // because in this case you save the current msp_counter; in all 
-								   // the other you save the old counter 
 			load_dev_or_msp <= 1'b1;
 		end
 		endcase	
