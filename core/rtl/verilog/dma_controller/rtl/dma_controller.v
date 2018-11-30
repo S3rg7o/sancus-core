@@ -115,41 +115,8 @@ reg error_flag;
 reg drive_dma_addr; //0: dma_addr = 'hz || 1: dma_addr
 
 // FSM States Definition
-`ifdef SIM
-	reg [15*8:0] state, next_state; //states stored in ASCII 
-`else
-	reg [4:0]state, next_state; //just codifies the states
-`endif
+reg [4:0]state, next_state; //just codifies the states
 
-`ifdef SIM
-localparam 	IDLE  = "IDLE",
-			GET_REGS  = "GET_REGS",
-			LOAD_DMA_ADD  = "LOAD_DMA_ADD",
-			READ_MEM  = "READ_MEM",
-			ERROR  = "ERROR",
-			SEND_TO_DEV0  = "SEND_TO_DEV0",
-			WAIT_READ  = "WAIT_READ",
-			SEND_TO_DEV1  = "SEND_TO_DEV1",
-			OLD_ADDR_RD = "OLD_ADDR_RD",
-			NOP  = "NOP",
-			END_READ  = "END_READ",
-			// Write 
-			READ_DEV0  = "READ_DEV0",
-			READ_DEV1  = "READ_DEV1",
-			WAIT_WRITE  = "WAIT_WRITE",
-			SEND_TO_MEM0  = "SEND_TO_MEM0",
-			SEND_TO_MEM1  = "SEND_TO_MEM1",
-			OLD_ADDR_WR  = "OLD_ADDR_WR",
-			END_WRITE  = "END_WRITE",
-			// Fifo full 
-			FIFO_FULL_RD  = "FIFO_FULL_RD",
-			EMPTY_FIFO_READ  = "EMPTY_FIFO_READ",
-			RESET  = "RESET",
-			FIFO_FULL_WR  = "FIFO_FULL_WR",
-			EMPTY_FIFO_WRITE  = "EMPTY_FIFO_WRITE",
-			OLD_ADDR_EMP_FIFO_W = "OLD_ADDR_EMP_FIFO_W",
-			RESTORE_DEV_COUNT = "RESTORE_DEV_COUNT";
-`else
 localparam 	IDLE  = 0,
 			GET_REGS  = 1,
 			// Read
@@ -181,7 +148,6 @@ localparam 	IDLE  = 0,
 			OLD_ADDR_EMP_FIFO_W = 23,
 			RESTORE_DEV_COUNT = 24,
 			RESET  = 20;	
-`endif
 
 //--------------------------------//
 //--------------------------------//
@@ -282,7 +248,7 @@ end
 always @(posedge clk,posedge reset)	begin
 	if (reset) begin
 		state <= RESET; //Asynchronus reset	
-		next_state <= RESET;
+		//next_state <= RESET; synthesis error: it causes multiple driver for next_state, since the change in state <= RESET triggers the next state generation, that derives next_state
 	end	else state <= next_state;
 end
 
