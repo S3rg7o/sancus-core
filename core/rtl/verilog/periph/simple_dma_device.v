@@ -227,45 +227,39 @@ end
 // ----------------------------------------------------
 
 always @(posedge write_reg_wr) begin
-  	config_wr_intern   <= 1'b1;	
 	internal_status[3] <= 1'b0; //wait for dma_ack
-	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
 always @(posedge dma_ack & ~config_reg[RD_WR]) begin
-  	config_wr_intern   <= 1'b1;	
 	internal_status[3] <= 1'b1; //trigger next read 
-	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
-
-
 always @(posedge config_reg[START]) begin
-	config_wr_intern   <= 1'b1;	
 	internal_status[7] <= 1'b0;
 	internal_status[5] <= 1'b0;
 	internal_status[3] <= ~config_reg[RD_WR];
-	@(posedge clk)  config_wr_intern   <= 1'b0;		
 end
 
 always @(posedge dma_end_flag) begin
-	config_wr_intern   <= 1'b1;	
-	internal_status[7] <= 1'b1;
-	@(posedge clk)  config_wr_intern   <= 1'b0;		
+	internal_status[7] <= 1'b1;		
 end
 
 always @(posedge read_reg_wr & config_reg[NON_ATOMIC]) begin //Autoreset DEV_ACK when reading a datum
-	config_wr_intern   <= 1'b1;
-	internal_status[5] <= 1'b1;
-	@(posedge clk)  config_wr_intern   <= 1'b0;		
+	internal_status[5] <= 1'b1;		
 end 
 
-
 always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Set the DEV_ACK
-	config_wr_intern   <= 1'b1;
-	internal_status[5] <= 1'b0;
-	@(posedge clk)  config_wr_intern   <= 1'b0;	
+	internal_status[5] <= 1'b0;	
 end
+
+// To not have synthesis problem
+always @(internal_status) begin
+	config_wr_intern   <= 1'b1;		
+end
+ always @(posedge clk & config_wr_intern) begin
+	config_wr_intern   <= 1'b0;		
+end
+
 
 assign non_atom_ack = (~internal_status[5] & config_reg[RD_WR]) | write_reg_wr;
 assign dev_ack   = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
