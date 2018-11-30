@@ -263,7 +263,7 @@ end*/
 
 assign non_atom_ack = (~config_reg[13] & config_reg[RD_WR]) | write_reg_wr;
 assign dev_ack   = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
-assign dma_rqst  = config_reg[START] & ~config_reg[15]  
+assign dma_rqst  = config_reg[START] & ~config_reg[15] ;
 assign dma_rd_wr = config_reg[RD_WR]; // 1: Read | 0: Write
 
 endmodule 
