@@ -154,7 +154,7 @@ localparam END_OP     = 15;
 
 reg  [15:0] config_reg;
 wire        config_wr_ext = reg_wr[CONFIG];
-//reg 		config_wr_intern;
+reg 		config_wr_intern;
 
 always @ (posedge clk or posedge reset ) 
   if (reset)        		 config_reg <= 16'h0000;
@@ -261,7 +261,7 @@ end
 end*/
 
 
-assign non_atom_ack = (~internal_status[5] & config_reg[RD_WR]) | write_reg_wr;
+assign non_atom_ack = (~config_reg[13] & config_reg[RD_WR]) | write_reg_wr;
 assign dev_ack   = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
 assign dma_rqst  = config_reg[START] & ~config_reg[15]  
 assign dma_rd_wr = config_reg[RD_WR]; // 1: Read | 0: Write
