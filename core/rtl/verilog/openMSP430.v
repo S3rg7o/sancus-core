@@ -62,9 +62,9 @@ module  openMSP430 (
     lfxt_enable,                   // ASIC ONLY: Low frequency oscillator enable
     lfxt_wkup,                     // ASIC ONLY: Low frequency oscillator wake-up (asynchronous)
     mclk,                          // Main system clock
-    dma_dout,                                // Direct Memory Access data output
-    dma_ready,                               // Direct Memory Access is complete
-    dma_resp,                                // Direct Memory Access response (0:Okay / 1:Error)
+    dma_dout,                      // Direct Memory Access data output
+    dma_ready,                     // Direct Memory Access is complete
+    dma_resp,                      // Direct Memory Access response (0:Okay / 1:Error)
     per_addr,                      // Peripheral address
     per_din,                       // Peripheral data input
     per_we,                        // Peripheral write enable (high active)

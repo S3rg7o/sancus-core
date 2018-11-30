@@ -148,7 +148,6 @@ localparam 	IDLE  = 0,
 			OLD_ADDR_EMP_FIFO_W = 23,
 			RESTORE_DEV_COUNT = 24,
 			RESET  = 20;	
-`endif
 
 //--------------------------------//
 //--------------------------------//
@@ -249,6 +248,7 @@ end
 always @(posedge clk,posedge reset)	begin
 	if (reset) begin
 		state <= RESET; //Asynchronus reset	
+		//next_state <= RESET; synthesis error: it causes multiple driver for next_state, since the change in state <= RESET triggers the next state generation, that derives next_state
 	end	else state <= next_state;
 end
 
@@ -270,9 +270,9 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= dma_ready ? READ_MEM : LOAD_DMA_ADD;
 			READ_MEM :
 				next_state <= dma_resp  ? ERROR : 
-							  fifo_full ? FIFO_FULL_RD :
-							  flag_cnt_words_mem ? SEND_TO_DEV0 :
-							  dma_ready ? READ_MEM : OLD_ADDR_RD;
+                              fifo_full ? FIFO_FULL_RD :
+                              flag_cnt_words_mem ? SEND_TO_DEV0 :
+                              dma_ready ? READ_MEM : OLD_ADDR_RD;
 			OLD_ADDR_RD : 
 				next_state <= dma_ready ? READ_MEM : OLD_ADDR_RD;
 			ERROR :
@@ -342,26 +342,26 @@ always @(state,dma_ready) begin
 	count_en <= 1'b0;
 	count_load <= 1'b0;
 	count_rst <= 1'b0;
-	dev_count_rst <= 1'b0;
 	dev_count_reg_en_f <= 1'b0;
+	dev_count_rst <= 1'b0;
 	dma_ack <= 1'b0;
 	dma_en <= 1'b0;
-	out_to_msp <= 1'b0;
 	dma_priority <= 1'b0;
 	dma_we  <= 2'b00;
 	drive_dma_addr <= 1'b0;
 	end_flag <= 1'b0;
 	error_flag <= 1'b0;
 	fifo_en <= 1'b0;
+	fifo_old_add_flag <= 1'b0;
 	fifo_rst <= 1'b0;
 	fifo_wr_rd <= 1'b0;
-	fifo_old_add_flag <= 1'b0;
+	load_dev_or_msp <= 1'b0;
 	msp_count_reg_en_f <= 1'b0;
 	msp_count_rst <= 1'b0;
 	mux_old_addr <= 1'b0;
 	old_addr_reg_en <= 1'b0;
 	old_addr_rst <= 1'b0;
-	load_dev_or_msp <= 1'b0;
+	out_to_msp <= 1'b0;
 	words_reg_en <= 1'b0;
 	words_rst <= 1'b0;
 	

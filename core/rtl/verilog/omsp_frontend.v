@@ -332,8 +332,9 @@ always @(posedge mclk or posedge puc_rst)
 // after the offending instruction has completed (eg. mov &illegal, &valid)
 reg     sm_irq_reg;
 always @(posedge mclk or posedge puc_rst)
-  if (puc_rst | exec_done)  sm_irq_reg <= 1'b0;
-  else if (sm_violation)    sm_irq_reg <= 1'b1;
+  if (puc_rst)           sm_irq_reg <= 1'b0;
+  else if (exec_done)    sm_irq_reg <= 1'b0;
+  else if (sm_violation) sm_irq_reg <= 1'b1;
 
 // Only treat violation as interrupt request when not caused by hw IRQ logic
 // NOTE: clocked register is only updated one cycle after violation
@@ -445,7 +446,7 @@ reg  [15:0] pc;
 wire [15:0] pc_incr = pc + {14'h0000, fetch, 1'b0};
 wire [15:0] pc_nxt  = pc_sw_wr               ? pc_sw    :
                       (i_state==I_IRQ_FETCH) ? irq_addr :
-                      (i_state==I_IRQ_DONE)  ? mdb_in   :  pc_incr;
+                      (i_state==I_IRQ_DONE)  ? mdb_in   :  pc_incr; //'mdb_in' comes from mem_backbone 'fe_mdb_in'
 
 `ifdef CLOCK_GATING
 wire       pc_en  = fetch                  |
