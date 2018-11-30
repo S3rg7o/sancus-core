@@ -240,7 +240,8 @@ always @(posedge config_reg[START]) begin
 end
 
 always @(posedge dma_end_flag) begin
-	config_reg[15] <= 1'b1;		
+	config_reg[15] <= 1'b1;
+	config_reg[START] <= 1'b0;				
 end
 
 always @(posedge read_reg_wr & config_reg[NON_ATOMIC]) begin //Autoreset DEV_ACK when reading a datum
