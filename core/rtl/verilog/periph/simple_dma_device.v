@@ -170,7 +170,7 @@ wire        read_reg_wr = dma_ack & dma_rqst & dma_rd_wr;
 wire		read_reg_reset = reset | config_reg[RESET_REGS];
 
 always @ (posedge clk or posedge read_reg_reset)
-  if (read_reg_reset)            read_reg <=  16'h0000;
+  if (read_reg_reset)   read_reg <=  16'h0000;
   else if (read_reg_wr) read_reg <=  dev_in; // input from the DMA controller
   else 				    read_reg <= read_reg;
 
@@ -256,8 +256,8 @@ end
 always @(internal_status) begin
 	config_wr_intern   <= 1'b1;		
 end
- always @(posedge clk & config_wr_intern) begin
-	config_wr_intern   <= 1'b0;		
+ always @(posedge clk) begin
+	if (config_wr_intern) config_wr_intern   <= 1'b0;		
 end
 
 
