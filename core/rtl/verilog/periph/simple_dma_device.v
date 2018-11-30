@@ -154,13 +154,12 @@ localparam END_OP     = 15;
 
 reg  [15:0] config_reg;
 wire        config_wr_ext = reg_wr[CONFIG];
-reg 		config_wr_intern;
+//reg 		config_wr_intern;
 
 always @ (posedge clk or posedge reset ) 
   if (reset)        		 config_reg <= 16'h0000;
   else if (config_wr_ext) 	 config_reg <= {config_reg[15:8], per_din[7:0]}; 
-  else if (config_wr_intern) config_reg <= {internal_status, config_reg[7:5], config_reg[ACK_SET] & ~internal_status[5], 
-                                             config_reg[3:1], config_reg[START] & ~internal_status[7]}; 
+//  else if (config_wr_intern) config_reg <= {internal_status, config_reg[7:5], config_reg[ACK_SET] & ~internal_status[5], cpnfig_reg[3:1], }; 
   else                       config_reg <= config_reg;
 
 // READ_REG: Bridge between DMA Contr. and Dev.- It's Read-only for the CPU!
@@ -213,57 +212,58 @@ wire [15:0] per_dout   		= start_addr_rd  |
 //=============================================================
 // 5) DMA Device behaviour
 //=============================================================
-reg [7:0] internal_status;
+/*reg [7:0] internal_status;
 initial 
 begin
  internal_status <= 'h0;
-end 
+end */
 
-// 	Internal Status
-// ----------------------------------------------------
-// | END_OP	| 0 | ~DEV_ACK | 0 | WRITE_OK | 0 | 0 | 0 |
-// ----------------------------------------------------
-// |  7     | 6 |	 5    | 4 |     3     | 2 | 1 | 0 |
-// ----------------------------------------------------
+// 	Config reg[15:8] ==> Internal Status
+// -------------------------------------------------------
+// | END_OP	| 0  | ~DEV_ACK | 0  | WRITE_OK | 0  | 0 | 0 |
+// -------------------------------------------------------
+// |  15    | 14 |	 13    | 12 |     11    | 10 | 9 | 8 |
+// -------------------------------------------------------
 
 always @(posedge write_reg_wr) begin
-	internal_status[3] <= 1'b0; //wait for dma_ack
+	config_reg[11] <= 1'b0; //wait for dma_ack
 end
 
 always @(posedge dma_ack & ~config_reg[RD_WR]) begin
-	internal_status[3] <= 1'b1; //trigger next read 
+	config_reg[11] <= 1'b1; //trigger next read 
 end
 
 always @(posedge config_reg[START]) begin
-	internal_status[7] <= 1'b0;
-	internal_status[5] <= 1'b0;
-	internal_status[3] <= ~config_reg[RD_WR];
+	config_reg[15] <= 1'b0;
+	config_reg[13] <= 1'b0;
+	config_reg[11] <= ~config_reg[RD_WR];
 end
 
 always @(posedge dma_end_flag) begin
-	internal_status[7] <= 1'b1;		
+	config_reg[15] <= 1'b1;		
 end
 
 always @(posedge read_reg_wr & config_reg[NON_ATOMIC]) begin //Autoreset DEV_ACK when reading a datum
-	internal_status[5] <= 1'b1;		
+	config_reg[13] <= 1'b1;		
+	config_reg[5ACK_SET] = 0;
 end 
 
-always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Set the DEV_ACK
-	internal_status[5] <= 1'b0;	
+always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Request the setting of the DEV_ACK
+	config_reg[13] <= 1'b0;	
 end
 
-// To not have synthesis problem
+/*// To not have synthesis problem
 always @(internal_status) begin
 	config_wr_intern   <= 1'b1;		
 end
  always @(posedge clk) begin
 	if (config_wr_intern) config_wr_intern   <= 1'b0;		
-end
+end*/
 
 
 assign non_atom_ack = (~internal_status[5] & config_reg[RD_WR]) | write_reg_wr;
 assign dev_ack   = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
-assign dma_rqst  = config_reg[START];   
+assign dma_rqst  = config_reg[START] & ~config_reg[15]  
 assign dma_rd_wr = config_reg[RD_WR]; // 1: Read | 0: Write
 
 endmodule 
