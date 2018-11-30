@@ -245,7 +245,7 @@ end
 
 always @(posedge read_reg_wr & config_reg[NON_ATOMIC]) begin //Autoreset DEV_ACK when reading a datum
 	config_reg[13] <= 1'b1;		
-	config_reg[5ACK_SET] = 0;
+	config_reg[ACK_SET] <= 0;
 end 
 
 always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Request the setting of the DEV_ACK
@@ -262,8 +262,8 @@ end*/
 
 
 assign non_atom_ack = (~config_reg[13] & config_reg[RD_WR]) | write_reg_wr;
-assign dev_ack   = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
-assign dma_rqst  = config_reg[START] & ~config_reg[15] ;
-assign dma_rd_wr = config_reg[RD_WR]; // 1: Read | 0: Write
+assign dev_ack      = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
+assign dma_rqst     = config_reg[START] & ~config_reg[15] ;
+assign dma_rd_wr    = config_reg[RD_WR]; // 1: Read | 0: Write
 
 endmodule 
