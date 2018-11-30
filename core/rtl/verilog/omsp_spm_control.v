@@ -80,8 +80,9 @@ assign violation = |spms_violation || (next_id == 16'hfff0);
 generate
   genvar i;
   assign spms_first_disabled[0] = ~spms_enabled[0];
-  for (i = 1; i < `NB_SPMS; i = i + 1)
+  for (i = 1; i < `NB_SPMS; i = i + 1) begin : spms_disabled
     assign spms_first_disabled[i] = ~spms_enabled[i] & ~|spms_first_disabled[0:i-1];
+end
 endgenerate
 
 assign spm_data_select_valid = |spms_data_selected;
