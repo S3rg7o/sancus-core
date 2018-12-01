@@ -142,12 +142,12 @@ input                dco_clk;      // Fast oscillator (fast clock)
 input         [15:0] dmem_dout;    // Data Memory data output
 input  	      [13:0] irq;          // Maskable interrupts
 input                lfxt_clk;     // Low frequency oscillator (typ 32kHz)
-input         [15:1] dma_addr;               // Direct Memory Access address
-input         [15:0] dma_din;                // Direct Memory Access data input
-input                dma_en;                 // Direct Memory Access enable (high active)
-input                dma_priority;           // Direct Memory Access priority (0:low / 1:high)
-input          [1:0] dma_we;                 // Direct Memory Access write byte enable (high active)
-input                dma_wkup;               // ASIC ONLY: DMA Wake-up (asynchronous and non-glitchy)
+input         [15:1] dma_addr;     // Direct Memory Access address
+input         [15:0] dma_din;      // Direct Memory Access data input
+input                dma_en;       // Direct Memory Access enable (high active)
+input                dma_priority; // Direct Memory Access priority (0:low / 1:high)
+input          [1:0] dma_we;       // Direct Memory Access write byte enable (high active)
+input                dma_wkup;     // ASIC ONLY: DMA Wake-up (asynchronous and non-glitchy)
 input  	             nmi;          // Non-maskable interrupt (asynchronous and non-glitchy)
 input         [15:0] per_dout;     // Peripheral data output
 input         [15:0] pmem_dout;    // Program Memory data output
@@ -445,7 +445,9 @@ omsp_execution_unit execution_unit_0 (
     .current_inst_pc (current_inst_pc),
     .prev_inst_pc (prev_inst_pc),
     .irq_num      (irq_num),
-    .irq_detect   (irq_detect)
+    .irq_detect   (irq_detect),
+    .dma_addr     (dma_addr),      // Direct Memory Access address
+    .dma_en       (dma_en)         // Direct Memory Access enable (high active)
 );
 
 
