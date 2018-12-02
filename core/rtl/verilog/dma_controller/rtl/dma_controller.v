@@ -12,6 +12,7 @@ module dma_controller (
 	dma_ack,
 	dev_out,
 	end_flag,
+	error_flag,
 	
 	// Inputs from OpenMSP430
 	dma_in,
@@ -64,7 +65,7 @@ output [DATA_LEN-1:0] dma_out;
 output reg dma_en;
 output reg dma_priority; 
 output reg [1:0] dma_we;
-
+output reg error_flag;
 
 //--------------------------------//
 //--------------------------------//
@@ -111,7 +112,6 @@ reg dev_count_rst, msp_count_rst;
 wire security_violation;
 reg flag_cnt_words, flag_cnt_words_mem; //end-counts for the FSM
 reg out_to_msp; //1: FIFO out to DMA || 0: FIFO out to DEV
-reg error_flag;  
 reg drive_dma_addr; //0: dma_addr = 'hz || 1: dma_addr
 
 // FSM States Definition

@@ -19,7 +19,8 @@ module  simple_dma_device (
 // INPUTs from DMA
 	dev_in,
 	dma_ack,
-	dma_end_flag
+	dma_end_flag,
+	dma_error_flag
 );
 
 
@@ -48,6 +49,7 @@ input   	            reset;	        // Main system reset
 input			 [15:0] dev_in;			// Data from DMA Controller
 input					dma_ack;
 input					dma_end_flag;
+input                   dma_error_flag;
 
 
 //=============================================================================
@@ -144,13 +146,19 @@ localparam RD_WR      = 2;
 localparam NON_ATOMIC = 3;
 localparam ACK_SET    = 4;
 localparam RESET_REGS = 5;
+localparam ERROR_FLAG = 9;
 localparam END_OP     = 15;
 
-// -----------------------------------------------------------------------------------------------------------
-// | END_OP	| 0 | ~DEV_ACK |  0  | WRITE_OK | --- | RESET_REGS |  ACK_SET  | NON_ATOMIC | RD_WR | 0 | START |
-// -----------------------------------------------------------------------------------------------------------
-// |  15   | 14	|    13    | 12  |    11    | --- |     5      |     4     |     3      |   2   | 1  |  0   |
-// -----------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------
+// | END_OP	| - | ~DEV_ACK |  -  | WRITE_OK |  -  | ERROR_FLAG |  -  |
+// -------------------------------------------------------------------
+// |  15   | 14	|    13    | 12  |    11    | 10  |      9     |  8  |  
+// -------------------------------------------------------------------
+// -------------------------------------------------------------------
+// | - | - | RESET_REGS |  ACK_SET  | NON_ATOMIC | RD_WR | - | START |
+// -------------------------------------------------------------------
+// | 7 | 6 |     5      |     4     |     3      |   2   | 1 |   0   |
+// -------------------------------------------------------------------
 
 reg  [15:0] config_reg;
 wire        config_wr = reg_wr[CONFIG];
@@ -230,14 +238,22 @@ always @(posedge dma_end_flag) begin
 	config_reg[START] <= 1'b0;				
 end
 
-always @(posedge read_reg_wr & config_reg[NON_ATOMIC]) begin //Autoreset DEV_ACK when reading a datum
-	config_reg[13] <= 1'b1;		
-	config_reg[ACK_SET] <= 0;
+always @(posedge read_reg_wr, posedge dma_error_flag) begin
+	if (config_reg[NON_ATOMIC]) begin  // If non atomic operation is happening
+	    config_reg[13]      <= 1'b1;   // Autoreset DEV_ACK when reading a datum or on dma_error		
+	    config_reg[ACK_SET] <= 1'b0;
+	end
 end 
 
 always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Request the setting of the DEV_ACK
 	config_reg[13] <= 1'b0;	
 end
+
+//TODO da decommentare e magari da implementare, in modo che il software sappia quando la lettura è fallita.
+/*always @(posedge dma_error_flag) begin
+	config_reg[ERROR_FLAG] <= 1'b1;
+end*/
+
 
 
 assign non_atom_ack = (~config_reg[13] & config_reg[RD_WR]) | write_reg_wr;

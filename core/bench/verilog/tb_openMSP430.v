@@ -460,6 +460,7 @@ parameter FIFO_DEPTH = 5;
 
 wire [14:0] dma_num_words;
 wire [15:0]	dma_start_address;
+wire        dma_error_flag;
 wire 		dma_rd_wr;
 wire		dma_rqst;
 wire		dev_ack;
@@ -480,6 +481,7 @@ dma_controller #( .ADD_LEN(15),
 	// Outputs to Device
 	.dma_ack		(dma_ack),
 	.end_flag		(dma_end_flag),
+	.error_flag     (dma_error_flag),
 	.dev_out		(dev_in),
 	// Outputs to OpenMSP430
 	.dma_addr		(dma_addr),
@@ -525,7 +527,8 @@ simple_dma_device dma_dev0 (
     // INPUTs from DMA
 	.dev_in			(dev_in),
 	.dma_ack		(dma_ack),
-	.dma_end_flag	(dma_end_flag)
+	.dma_end_flag	(dma_end_flag),
+	.dma_error_flag (dma_error_flag)
 	);	
 
 `endif
