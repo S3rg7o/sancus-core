@@ -447,6 +447,7 @@ omsp_execution_unit execution_unit_0 (
     .irq_num      (irq_num),
     .irq_detect   (irq_detect),
     .dma_addr     (dma_addr),      // Direct Memory Access address
+    .dma_we       (dma_we),
     .dma_en       (dma_en)         // Direct Memory Access enable (high active)
 );
 

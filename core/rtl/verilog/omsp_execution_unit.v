@@ -95,6 +95,7 @@ module  omsp_execution_unit (
     irq_num,
     irq_detect,
     dma_addr,                      // Direct Memory Access address
+    dma_we,
     dma_en                         // Direct Memory Access enable (high active)
 );
 
@@ -148,6 +149,7 @@ input        [15:0] prev_inst_pc;
 input         [3:0] irq_num;
 input               irq_detect;
 input        [15:1] dma_addr;      // Direct Memory Access address
+input         [1:0] dma_we;
 input               dma_en;        // Direct Memory Access enable (high active)
 
 //=============================================================================
@@ -562,6 +564,8 @@ wire [15:0] dma_addr_extended = {dma_addr,1'b0}; //XXX (Sergio) remember that DM
 // fictitious; infact the physical address of the word to be accessed is contained in [15:1] DMA_ADDR. It's DMA_WE that decides which byte
 // of the 16bits word is gonna be accessed. However, both the bytes are stored in the same mem location addressed by [15:1]DMA_ADDR, the check should be done on that. Maybe it's possible to add as last bit 1 or 0, depending on which byte one wants to access, but I think it will work the same since, as I said, both the bytes are in the same word. Furthermore, at this stage of implementation, the DMA always accesses both the bytes, as DMA_WE is either "11" or "00". So no prolbem for now.
 wire [15:0] address_to_memory = dma_en ? dma_addr_extended : mab;
+wire [1:0]  memory_wr         = dma_en ? dma_wr : mb_wr;
+wire        memory_en         = dma_en | mb_en;
 
 omsp_spm_control #(
   .KEY_IDX_SIZE           (KEY_IDX_SIZE)
@@ -572,9 +576,9 @@ omsp_spm_control #(
   .prev_pc                (prev_inst_pc),
   .handling_irq           (handling_irq),
   .irq_num                (irq_num),
-  .eu_mab                 (address_to_memory),
-  .eu_mb_en               (mb_en),
-  .eu_mb_wr               (mb_wr),
+  .eu_mab                 (address_to_memory), //(Sergio)
+  .eu_mb_en               (memory_en),         //(Sergio)
+  .eu_mb_wr               (memory_wr),         //(Sergio)
   .update_spm             (sm_update),
   .enable_spm             (sm_enable),
   .disable_spm            (sm_disable),
