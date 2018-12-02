@@ -169,7 +169,7 @@ wire                 ext_per_en;
 assign      cpu_halt_cmd  =  dbg_halt_cmd | (dma_en & dma_priority);
 
 // Return ERROR response if address lays outside the memory spaces (Peripheral, Data & Program memories)
-assign      dma_resp      = ~dbg_mem_en & ~(ext_dmem_sel | ext_pmem_sel | ext_per_sel) & dma_en;
+assign      dma_resp      = (~dbg_mem_en & ~(ext_dmem_sel | ext_pmem_sel | ext_per_sel) | sm_violation) & dma_en;
 
 // Master interface access is ready when the memory access occures
 assign      dma_ready     = ~dbg_mem_en &  (ext_dmem_en  | ext_pmem_en  | ext_per_en | dma_resp);

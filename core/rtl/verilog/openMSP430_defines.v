@@ -139,8 +139,10 @@
 //-------------------------------------------------------
 // Include/Exclude DMA interface support
 //-------------------------------------------------------
+// Protection define enable the inclusion of DMA_ADDR 
+// into MAL in the execution unit
 `define DMA_IF_EN
-
+`define DMA_PROTECTION_EN  //(Sergio)
 
 
 ///-------------------------------------------------------
