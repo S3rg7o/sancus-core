@@ -351,8 +351,8 @@ omsp_frontend frontend_0 (
     .irq_acc      (irq_acc),       // Interrupt request accepted
     .mab          (fe_mab),        // Frontend Memory address bus
     .mb_en        (fe_mb_en),      // Frontend Memory bus enable
-    .mclk_dma_enable   (mclk_dma_enable),// DMA Sub-System Clock enable
-    .mclk_dma_wkup     (mclk_dma_wkup),  // DMA Sub-System Clock wake-up (asynchronous)
+    .mclk_dma_enable (mclk_dma_enable),// DMA Sub-System Clock enable
+    .mclk_dma_wkup   (mclk_dma_wkup),  // DMA Sub-System Clock wake-up (asynchronous)
     .mclk_enable  (mclk_enable),   // Main System Clock enable
     .mclk_wkup    (mclk_wkup),     // Main System Clock wake-up (asynchronous)
     .nmi_acc      (nmi_acc),       // Non-Maskable interrupt request accepted

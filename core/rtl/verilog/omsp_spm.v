@@ -8,9 +8,9 @@ module omsp_spm(
   input  wire                    puc_rst,
   input  wire             [15:0] pc,
   input  wire             [15:0] prev_pc,
-  input  wire             [15:0] eu_mab,
-  input  wire                    eu_mb_en,
-  input  wire              [1:0] eu_mb_wr,
+  input  wire             [15:0] mab,
+  input  wire                    mb_en,
+  input  wire              [1:0] mb_wr,
   input  wire                    update_spm,
   input  wire                    enable_spm,
   input  wire                    disable_spm,
@@ -121,10 +121,10 @@ begin
 end
 
 wire exec_public = exec_spm(pc);
-wire access_public = eu_mb_en & (eu_mab >= public_start) & (eu_mab < public_end);
-wire access_secret = eu_mb_en & (eu_mab >= secret_start) & (eu_mab < secret_end);
+wire access_public = mb_en & (mab >= public_start) & (mab < public_end);
+wire access_secret = mb_en & (mab >= secret_start) & (mab < secret_end);
 wire mem_violation = (access_public & ~(enable_spm | disable_spm | verify_spm |
-                                        (executing & ~eu_mb_wr)) |
+                                        (executing & ~mb_wr)) |
                      (access_secret & ~exec_public));
 wire exec_violation = exec_public & ~exec_spm(prev_pc) & (pc != public_start);
 wire create_violation = check_new_spm &
@@ -141,7 +141,7 @@ begin
   begin
     if (mem_violation)
     begin
-      $write("mem violation @0x%h, from ", eu_mab);
+      $write("mem violation @0x%h, from ", mab);
       if (handling_irq) $display("IRQ");
       else              $display("0x%h", pc);
     end
