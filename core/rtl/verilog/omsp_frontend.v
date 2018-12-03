@@ -365,24 +365,24 @@ reg  [3:0] irq_num;
 always @(posedge mclk_irq_num or posedge puc_rst)
   if (puc_rst)         irq_num <= 4'hf;
 `ifdef CLOCK_GATING
-  else                 irq_num <= nmi_pnd            ?  4'he :
+  else                 irq_num <= nmi_pnd                  ?  4'he :
 `else
-  else if (irq_detect) irq_num <= nmi_pnd            ?  4'he :
+  else if (irq_detect) irq_num <= nmi_pnd                  ?  4'he :
 `endif
-                                 (irq[13] | sm_irq)  ?  4'hd :
-                                  irq[12]            ?  4'hc :
-                                  irq[11]            ?  4'hb :
-                                 (irq[10] | wdt_irq) ?  4'ha :
-                                  irq[9]             ?  4'h9 :
-                                  irq[8]             ?  4'h8 :
-                                  irq[7]             ?  4'h7 :
-                                  irq[6]             ?  4'h6 :
-                                  irq[5]             ?  4'h5 :
-                                  irq[4]             ?  4'h4 :
-                                  irq[3]             ?  4'h3 :
-                                  irq[2]             ?  4'h2 :
-                                  irq[1]             ?  4'h1 :
-                                  irq[0]             ?  4'h0 : 4'hf;
+                                 (irq[13] | sm_irq)        ?  4'hd :
+                                 (irq[12] | dma_violation) ?  4'hc :
+                                  irq[11]                  ?  4'hb :
+                                 (irq[10] | wdt_irq)       ?  4'ha :
+                                  irq[9]                   ?  4'h9 :
+                                  irq[8]                   ?  4'h8 :
+                                  irq[7]                   ?  4'h7 :
+                                  irq[6]                   ?  4'h6 :
+                                  irq[5]                   ?  4'h5 :
+                                  irq[4]                   ?  4'h4 :
+                                  irq[3]                   ?  4'h3 :
+                                  irq[2]                   ?  4'h2 :
+                                  irq[1]                   ?  4'h1 :
+                                  irq[0]                   ?  4'h0 : 4'hf;
 
 wire [15:0] irq_addr    = {11'h7ff, irq_num, 1'b0};
 
