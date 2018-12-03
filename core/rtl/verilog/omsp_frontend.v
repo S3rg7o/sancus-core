@@ -364,7 +364,7 @@ always @(posedge mclk_irq_num or posedge puc_rst)
 `else
   else if (irq_detect) irq_num <= nmi_pnd            ?  4'he :
 `endif
-                                 (irq[13] | sm_irq)  ?  4'hc: //d :
+                                 (irq[13] | sm_irq)  ?  4'hd :
                                   irq[12]            ?  4'hc :
                                   irq[11]            ?  4'hb :
                                  (irq[10] | wdt_irq) ?  4'ha :
