@@ -81,6 +81,7 @@ module  omsp_frontend (
     prev_inst_pc,
     irq_num,
     irq_detect,
+    dma_violation,
 
 // INPUTs
     cpu_en_s,                      // Enable CPU code execution (synchronous)
@@ -144,6 +145,7 @@ output       [15:0] current_inst_pc;
 output       [15:0] prev_inst_pc;
 output        [3:0] irq_num;
 output              irq_detect;
+output              dma_violation;
 
 // INPUTs
 //=========
@@ -323,7 +325,6 @@ always @(posedge mclk or posedge puc_rst)
 // 4.1) INTERRUPT HANDLING
 //-----------------------------------------
 wire    sm_violation;
-wire    dma_violation;
 assign  sm_violation  = dma_en ? 1'b0 : violation;
 assign  dma_violation = dma_en ? violation : 1'b0;
 
@@ -347,7 +348,7 @@ assign  sm_irq      = (sm_irq_reg | sm_violation);
 wire    do_sm_irq   = sm_irq & ~inst_so[`IRQ];
 
 //  Detect other interrupts
-wire    irq_pnd     = (do_sm_irq | nmi_pnd | ((|irq | wdt_irq) & gie));
+wire    irq_pnd     = (dma_violation | do_sm_irq | nmi_pnd | ((|irq | wdt_irq) & gie));
 assign  irq_detect  = irq_pnd
                       & ~cpu_halt_req & ~dbg_halt_st
                       & (exec_done | (i_state==I_IDLE));

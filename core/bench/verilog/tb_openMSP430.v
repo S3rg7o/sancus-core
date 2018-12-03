@@ -196,6 +196,7 @@ reg                cpu_en;
 reg         [13:0] wkup;
 wire        [13:0] wkup_in;
 wire               sm_violation;
+wire               dma_violation;
 
 // Scan (ASIC version only)
 reg                scan_enable;
@@ -429,6 +430,7 @@ openMSP430 dut (
     .smclk        (smclk),             // ASIC ONLY: SMCLK
     .smclk_en     (smclk_en),          // FPGA ONLY: SMCLK enable
     .spm_violation (sm_violation),
+    .dma_violation (dma_violation),
 
 // INPUTs
     .cpu_en       (cpu_en),            // Enable CPU code execution (asynchronous)

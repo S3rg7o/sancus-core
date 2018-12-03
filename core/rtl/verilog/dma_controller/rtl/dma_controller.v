@@ -425,6 +425,7 @@ always @(state,dma_ready) begin
 		begin
 			drive_dma_addr <= 1'b1;
 			error_flag <= 1'b1;	
+			fifo_rst  <= 1'b1;
 		end
 		SEND_TO_DEV0 : 
 		begin

@@ -77,6 +77,7 @@ module  openMSP430 (
     smclk,                         // ASIC ONLY: SMCLK
     smclk_en,                      // FPGA ONLY: SMCLK enable
     spm_violation,
+    dma_violation,
 
 // INPUTs
     cpu_en,                        // Enable CPU code execution (asynchronous and non-glitchy)
@@ -132,7 +133,7 @@ output               puc_rst;      // Main system reset
 output               smclk;        // ASIC ONLY: SMCLK
 output               smclk_en;     // FPGA ONLY: SMCLK enable
 output               spm_violation;
-
+output               dma_violation;
 // INPUTs
 //=========
 input                cpu_en;       // Enable CPU code execution (asynchronous and non-glitchy)
@@ -331,39 +332,40 @@ assign cpu_mclk = mclk;
 omsp_frontend frontend_0 (
 
 // OUTPUTs
-    .dbg_halt_st  (cpu_halt_st),   // Halt/Run status from CPU
-    .decode_noirq (decode_noirq),  // Frontend decode instruction
-    .e_state      (e_state),       // Execution state
-    .exec_done    (exec_done),     // Execution completed
-    .inst_ad      (inst_ad),       // Decoded Inst: destination addressing mode
-    .inst_as      (inst_as),       // Decoded Inst: source addressing mode
-    .inst_alu     (inst_alu),      // ALU control signals
-    .inst_bw      (inst_bw),       // Decoded Inst: byte width
-    .inst_dest    (inst_dest),     // Decoded Inst: destination (one hot)
-    .inst_dext    (inst_dext),     // Decoded Inst: destination extended instruction word
-    .inst_irq_rst (inst_irq_rst),  // Decoded Inst: Reset interrupt
-    .inst_jmp     (inst_jmp),      // Decoded Inst: Conditional jump
-    .inst_mov     (inst_mov),      // Decoded Inst: mov instruction
-    .inst_sext    (inst_sext),     // Decoded Inst: source extended instruction word
-    .inst_so      (inst_so),       // Decoded Inst: Single-operand arithmetic
-    .inst_src     (inst_src),      // Decoded Inst: source (one hot)
-    .inst_type    (inst_type),     // Decoded Instruction type
-    .irq_acc      (irq_acc),       // Interrupt request accepted
-    .mab          (fe_mab),        // Frontend Memory address bus
-    .mb_en        (fe_mb_en),      // Frontend Memory bus enable
+    .dbg_halt_st     (cpu_halt_st),   // Halt/Run status from CPU
+    .decode_noirq    (decode_noirq),  // Frontend decode instruction
+    .e_state         (e_state),       // Execution state
+    .exec_done       (exec_done),     // Execution completed
+    .inst_ad         (inst_ad),       // Decoded Inst: destination addressing mode
+    .inst_as         (inst_as),       // Decoded Inst: source addressing mode
+    .inst_alu        (inst_alu),      // ALU control signals
+    .inst_bw         (inst_bw),       // Decoded Inst: byte width
+    .inst_dest       (inst_dest),     // Decoded Inst: destination (one hot)
+    .inst_dext       (inst_dext),     // Decoded Inst: destination extended instruction word
+    .inst_irq_rst    (inst_irq_rst),  // Decoded Inst: Reset interrupt
+    .inst_jmp        (inst_jmp),      // Decoded Inst: Conditional jump
+    .inst_mov        (inst_mov),      // Decoded Inst: mov instruction
+    .inst_sext       (inst_sext),     // Decoded Inst: source extended instruction word
+    .inst_so         (inst_so),       // Decoded Inst: Single-operand arithmetic
+    .inst_src        (inst_src),      // Decoded Inst: source (one hot)
+    .inst_type       (inst_type),     // Decoded Instruction type
+    .irq_acc         (irq_acc),       // Interrupt request accepted
+    .mab             (fe_mab),        // Frontend Memory address bus
+    .mb_en           (fe_mb_en),      // Frontend Memory bus enable
     .mclk_dma_enable (mclk_dma_enable),// DMA Sub-System Clock enable
     .mclk_dma_wkup   (mclk_dma_wkup),  // DMA Sub-System Clock wake-up (asynchronous)
-    .mclk_enable  (mclk_enable),   // Main System Clock enable
-    .mclk_wkup    (mclk_wkup),     // Main System Clock wake-up (asynchronous)
-    .nmi_acc      (nmi_acc),       // Non-Maskable interrupt request accepted
-    .pc           (pc),            // Program counter
-    .pc_nxt       (pc_nxt),        // Next PC value (for CALL & IRQ)
-    .sm_irq       (sm_irq),
-    .spm_command  (spm_command),
+    .mclk_enable     (mclk_enable),   // Main System Clock enable
+    .mclk_wkup       (mclk_wkup),     // Main System Clock wake-up (asynchronous)
+    .nmi_acc         (nmi_acc),       // Non-Maskable interrupt request accepted
+    .pc              (pc),            // Program counter
+    .pc_nxt          (pc_nxt),        // Next PC value (for CALL & IRQ)
+    .sm_irq          (sm_irq),
+    .spm_command     (spm_command),
     .current_inst_pc (current_inst_pc),
-    .prev_inst_pc (prev_inst_pc),
-    .irq_num      (irq_num),
-    .irq_detect   (irq_detect),
+    .prev_inst_pc    (prev_inst_pc),
+    .irq_num         (irq_num),
+    .irq_detect      (irq_detect),
+    .dma_violation   (dma_violation),
 			     
 // INPUTs
     .cpu_en_s     (cpu_en_s),      // Enable CPU code execution (synchronous)
@@ -389,7 +391,7 @@ omsp_frontend frontend_0 (
     .spm_busy     (spm_busy),
     .pmem_writing (pmem_writing),
     .exec_sm      (exec_sm_eu),
-    .violation (spm_violation_eu)
+    .violation    (spm_violation_eu)
 );
 
 
@@ -505,7 +507,7 @@ omsp_mem_backbone mem_backbone_0 (
     .puc_rst      (puc_rst),       // Main system reset
     .scan_enable  (scan_enable),   // Scan enable (active during scan shifting)
     // violation signal is buffered in front-end for remainder of instruction
-    .sm_violation (sm_irq)
+    .violation    (sm_irq | dma_violation)
 );
 
 //=============================================================================
