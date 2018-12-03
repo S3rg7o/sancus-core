@@ -106,7 +106,7 @@ module  omsp_frontend (
     spm_busy,
     pmem_writing,
     exec_sm,
-    sm_violation
+    violation
 );
 
 // OUTPUTs
@@ -170,7 +170,8 @@ input               wkup;          // System Wake-up (asynchronous)
 input               spm_busy;
 input               pmem_writing;
 input               exec_sm;
-input               sm_violation;
+input               violation;	   // Memory violations signal, both DMA and SM.
+                                   // Its content is decoded at #325-#328 
 
 
 //=============================================================================
@@ -321,9 +322,13 @@ always @(posedge mclk or posedge puc_rst)
 //
 // 4.1) INTERRUPT HANDLING
 //-----------------------------------------
+wire    sm_violation;
+wire    dma_violation;
+assign  sm_violation  = dma_en ? 1'b0 : violation;
+assign  dma_violation = dma_en ? violation : 1'b0;
 
 // Detect reset interrupt
-reg         inst_irq_rst;
+reg     inst_irq_rst;
 always @(posedge mclk or posedge puc_rst)
   if (puc_rst)                  inst_irq_rst <= 1'b1;
   else if (exec_done)           inst_irq_rst <= 1'b0;
