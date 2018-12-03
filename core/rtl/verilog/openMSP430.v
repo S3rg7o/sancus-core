@@ -389,7 +389,7 @@ omsp_frontend frontend_0 (
     .spm_busy     (spm_busy),
     .pmem_writing (pmem_writing),
     .exec_sm      (exec_sm_eu),
-    .sm_violation (spm_violation_eu)
+    .violation (spm_violation_eu)
 );
 
 
