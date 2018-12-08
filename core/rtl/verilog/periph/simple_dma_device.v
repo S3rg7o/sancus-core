@@ -67,7 +67,7 @@ parameter [DEC_WD-1:0] START_ADDR	= 'h00,
                        N_WORDS	    = 'h02,
                        CONFIG 		= 'h04,
                        READ_REG		= 'h06,
-                       WRITE_REG      = 'h08;  
+                       WRITE_REG    = 'h08;  
 
 // Register one-hot decoder utilities
 parameter              DEC_SZ      =  (1 << DEC_WD);
@@ -246,9 +246,10 @@ always @(posedge reset or posedge config_reg[START] or posedge read_reg_wr or po
 	     if (config_reg[NON_ATOMIC])      // If non atomic operation is happening
 	             config_reg[13] <= 1'b1;  // Autoreset DEV_ACK when reading a datum or on dma_error	
 	     end		
-	else if (config_reg[ACK_SET])
+	else if (config_reg[ACK_SET]) begin
 	     if (config_reg[NON_ATOMIC])      // Request the setting of the DEV_ACK
-	             config_reg[13] <= 1'b0;	
+	             config_reg[13] <= 1'b0;
+	     end
     else if (config_reg[START])  
                  config_reg[13] <= 1'b0;
 	else         config_reg[13] <= config_reg[13];
@@ -258,8 +259,9 @@ end
 always @(posedge reset or posedge write_reg_wr or posedge dma_ack or posedge config_reg[START]) begin
 	if      (reset)              config_reg[11] <= 1'b0;
 	else if (write_reg_wr)       config_reg[11] <= 1'b0; //wait for dma_ack
-	else if (dma_ack)
+	else if (dma_ack) begin
 	     if (~config_reg[RD_WR]) config_reg[11] <= 1'b1; //trigger next read 
+	     end
 	else if (config_reg[START])  config_reg[11] <= ~config_reg[RD_WR];
 	else                         config_reg[11] <= config_reg[11];
 end
