@@ -267,7 +267,7 @@ always @(posedge reset or posedge write_reg_wr or posedge dma_ack or posedge con
 end
 
 // config_reg[ACK_SET]
-always @(posedge clk or posedge reset or posedge config_reg[START] or posedge read_reg_wr or posedge dma_error_flag or posedge config_reg[ACK_SET]) begin
+always @(posedge clk or posedge reset or posedge read_reg_wr or posedge dma_error_flag) begin
 	if (reset)   config_reg[ACK_SET] <= 1'b0;
     else if (read_reg_wr | dma_error_flag) begin
 	     if (config_reg[NON_ATOMIC])           // If non atomic operation is happening		
