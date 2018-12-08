@@ -137,10 +137,58 @@ always @ (posedge clk or posedge reset)
 assign dma_num_words = n_words;
 
    
-// CONFIG Register
-//-----------------   
+// READ_REG: Bridge between DMA Contr. and Dev.- It's Read-only for the CPU!
+//---------------------------------------   
+reg  [15:0] read_reg;
+wire        read_reg_wr    = dma_ack & dma_rqst & dma_rd_wr;
+wire		read_reg_reset = reset | config_reg[RESET_REGS];
+
+always @ (posedge clk or posedge read_reg_reset)
+  if   (read_reg_reset) read_reg <= 16'h0000;
+  else if (read_reg_wr) read_reg <= dev_in; // input from the DMA controller
+  else 				    read_reg <= read_reg;
+
+
+// WRITE_REG: config what to be written in the memory
+//---------------------------------------   
+reg [15:0] write_reg;
+wire write_reg_wr    = reg_wr[WRITE_REG];
+wire write_reg_reset = reset | config_reg[RESET_REGS];
+
+always @(posedge clk or posedge write_reg_reset)
+  if (write_reg_reset)   write_reg <= 16'h0000;
+  else if (write_reg_wr) write_reg <= per_din;
+  else	                 write_reg <= write_reg;
+  
+//assign dev_out 		= (~dma_rd_wr & dma_rqst) ? write_reg : 16'h0000; (sergio) it's not a problem to have the device always outputing the write_reg value. Memory is still written as usual
+assign dev_out 			= write_reg;
+		
+//=============================================================
+// 4) READ DATA GENERATION
+//=============================================================
+
+// Data output mux
+//-----------------  
+wire [15:0] start_addr_rd  	= start_addr  & {16{reg_rd[START_ADDR]}};
+wire [15:0] n_words_rd  	= n_words     & {16{reg_rd[N_WORDS]}};
+wire [15:0] config_rd  		= config_reg  & {16{reg_rd[CONFIG]}};
+wire [15:0] read_reg_rd		= read_reg    & {16{reg_rd[READ_REG]}};
+wire [15:0] write_reg_rd	= write_reg   & {16{reg_rd[WRITE_REG]}};
+
+wire [15:0] per_dout   		= start_addr_rd  |
+		                      n_words_rd  	 |
+		                      config_rd  	 |
+		                   	  write_reg_rd   |
+		                   	  read_reg_rd;
+		  
+		                      
+//=============================================================
+// 5) CONFIG Register
+//=============================================================
 // First half of the config register is for CPU configuration; the other half is set by the device itself. (Sergio)
-//
+reg  [15:0] config_reg;
+wire        config_wr = reg_wr[CONFIG];
+
 localparam START      = 0;
 localparam RD_WR      = 2;
 localparam NON_ATOMIC = 3;
@@ -159,95 +207,85 @@ localparam END_OP     = 15;
 // -------------------------------------------------------------------
 // | 7 | 6 |     5      |     4     |     3      |   2   | 1 |   0   |
 // -------------------------------------------------------------------
-
-reg  [15:0] config_reg;
-wire        config_wr = reg_wr[CONFIG];
-
-
-always @ (posedge clk or posedge reset ) 
-  if (reset)        		 config_reg <= 16'h0000;
-  else if (config_wr) 	 config_reg <= {config_reg[15:8], per_din[7:0]}; 
-  else                       config_reg <= config_reg;
-
-// READ_REG: Bridge between DMA Contr. and Dev.- It's Read-only for the CPU!
-//---------------------------------------   
-reg  [15:0] read_reg;
-wire        read_reg_wr = dma_ack & dma_rqst & dma_rd_wr;
-wire		read_reg_reset = reset | config_reg[RESET_REGS];
-
-always @ (posedge clk or posedge read_reg_reset)
-  if (read_reg_reset)   read_reg <=  16'h0000;
-  else if (read_reg_wr) read_reg <=  dev_in; // input from the DMA controller
-  else 				    read_reg <= read_reg;
-
-
-// WRITE_REG: config what to be written in the memory
-//---------------------------------------   
-reg [15:0] write_reg;
-wire write_reg_wr = reg_wr[WRITE_REG];
-wire write_reg_reset = reset | config_reg[RESET_REGS];
-
-always @ (posedge clk or posedge write_reg_reset)
-  if (write_reg_reset)   write_reg <= 16'h0000;
-  else if (write_reg_wr) write_reg <= per_din;
-  else	                 write_reg <= write_reg;
-  
-//assign dev_out 		= (~dma_rd_wr & dma_rqst) ? write_reg : 16'h0000; (sergio) it's not a problem to have the device always outputing the write_reg value. Memory is still written as usual
-assign dev_out 			= write_reg;
-
-
-		
-
-//=============================================================
-// 4) READ DATA GENERATION
-//=============================================================
-
-// Data output mux
-//-----------------  
-wire [15:0] start_addr_rd  	= start_addr  & {16{reg_rd[START_ADDR]}};
-wire [15:0] n_words_rd  	= n_words     & {16{reg_rd[N_WORDS]}};
-wire [15:0] config_rd  		= config_reg  & {16{reg_rd[CONFIG]}};
-wire [15:0] read_reg_rd		= read_reg    & {16{reg_rd[READ_REG]}};
-wire [15:0] write_reg_rd	= write_reg   & {16{reg_rd[WRITE_REG]}};
-
-wire [15:0] per_dout   		= start_addr_rd  |
-		                      n_words_rd  	 |
-		                      config_rd  	 |
-		                   	  write_reg_rd   |
-		                   	  read_reg_rd;
-		                      
-//=============================================================
-// 5) DMA Device behaviour
-//=============================================================
-always @(posedge write_reg_wr) begin
-	config_reg[11] <= 1'b0; //wait for dma_ack
+always @(posedge clk, posedge reset) begin
+   if (reset) begin 
+     config_reg[14] <= 1'b0;
+     config_reg[12] <= 1'b0;
+     config_reg[10] <= 1'b0;
+     config_reg[9]  <= 1'b0;
+     config_reg[8]  <= 1'b0;
+     config_reg[7]  <= 1'b0;
+     config_reg[6]  <= 1'b0;
+     config_reg[5]  <= 1'b0;
+     config_reg[3]  <= 1'b0;
+     config_reg[2]  <= 1'b0;
+     config_reg[1]  <= 1'b0;
+   end
+   else if (config_wr) begin
+     config_reg[7]  <= per_din[7];
+     config_reg[6]  <= per_din[6];
+     config_reg[5]  <= per_din[5];
+     config_reg[3]  <= per_din[3];
+     config_reg[2]  <= per_din[2];
+     config_reg[1]  <= per_din[1];
+   end 
 end
 
-always @(posedge dma_ack & ~config_reg[RD_WR]) begin
-	config_reg[11] <= 1'b1; //trigger next read 
+// config_reg[11]
+always @(posedge clk or posedge reset or posedge write_reg_wr or posedge dma_ack or posedge config_reg[START]) begin
+	if      (reset)              config_reg[11] <= 1'b0;
+	else if (write_reg_wr)       config_reg[11] <= 1'b0; //wait for dma_ack
+	else if (dma_ack)
+	     if (~config_reg[RD_WR]) config_reg[11] <= 1'b1; //trigger next read 
+	else if (config_reg[START])  config_reg[11] <= ~config_reg[RD_WR];
+	else                         config_reg[11] <= config_reg[11];
 end
 
-always @(posedge config_reg[START]) begin
-	config_reg[15] <= 1'b0;
-	config_reg[13] <= 1'b0;
-	config_reg[11] <= ~config_reg[RD_WR];
-end
-
-always @(posedge dma_end_flag) begin
-	config_reg[15] <= 1'b1;
-	config_reg[START] <= 1'b0;				
-end
-
-always @(posedge read_reg_wr, posedge dma_error_flag) begin
-	if (config_reg[NON_ATOMIC]) begin  // If non atomic operation is happening
-	    config_reg[13]      <= 1'b1;   // Autoreset DEV_ACK when reading a datum or on dma_error		
-	    config_reg[ACK_SET] <= 1'b0;
+// config_reg[15] and config_reg[START]
+always @(posedge clk or posedge reset or posedge config_reg[START] or posedge dma_end_flag) begin
+	if (reset) begin
+	    config_reg[15]    <= 1'b0;
+        config_reg[START] <= 1'b0;
 	end
+	else if (dma_end_flag) begin
+	    config_reg[15]    <= 1'b1;
+	    config_reg[START] <= 1'b0;				
+	end
+    else if (config_reg[START]) 
+        config_reg[15]  <= 1'b0;
+    else if (config_wr) 
+	    config_reg[START] <= per_din[START];	
+    else begin
+	    config_reg[15]    <= config_reg[15];
+        config_reg[START] <= config_reg[START];
+    end
+end
+
+// config_reg[13] and config_reg[ACK_SET]
+always @(posedge clk or posedge reset or posedge config_reg[START] or posedge read_reg_wr or posedge dma_error_flag or posedge config_reg[ACK_SET]) begin
+	if  (reset) begin
+	    config_reg[13]      <= 1'b0;
+        config_reg[ACK_SET] <= 1'b0;
+    end
+    else if (config_reg[START]) 
+        config_reg[13] <= 1'b0;
+    else if (read_reg_wr | dma_error_flag) begin
+	     if (config_reg[NON_ATOMIC]) begin  // If non atomic operation is happening
+	         config_reg[13]      <= 1'b1;   // Autoreset DEV_ACK when reading a datum or on dma_error		
+	         config_reg[ACK_SET] <= 1'b0;
+         end	
+    end
+	else if (config_reg[ACK_SET])
+	     if (config_reg[NON_ATOMIC]) // Request the setting of the DEV_ACK
+	         config_reg[13] <= 1'b0;	
+    else if (config_wr) 
+        config_reg[ACK_SET] <= per_din[ACK_SET]; 
+    else begin
+        config_reg[13]      <= config_reg[13];
+        config_reg[ACK_SET] <= config_reg[ACK_SET];
+    end
 end 
 
-always @(posedge config_reg[ACK_SET] & config_reg[NON_ATOMIC]) begin // Request the setting of the DEV_ACK
-	config_reg[13] <= 1'b0;	
-end
 
 //TODO da decommentare e magari da implementare, in modo che il software sappia quando la lettura è fallita.
 /*always @(posedge dma_error_flag) begin

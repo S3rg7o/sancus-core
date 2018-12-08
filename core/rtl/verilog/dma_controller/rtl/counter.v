@@ -9,18 +9,14 @@ input [L-1:0] data_in;
 output reg [L-1:0] cnt; 
 output end_cnt;
 
-always @(rst)
+always @(posedge rst, posedge clk)
 begin
-	if (rst) begin cnt = 0; end
-end	
-
-always @(posedge clk)
-begin
-	if (cnt_en) begin
-		cnt <= load ? data_in : cnt+1;
+	if (rst) cnt <= 0;
+	else begin
+	if (cnt_en) cnt <= load ? data_in : cnt+1;
 	end
 end
 
-assign end_cnt = &cnt;
+assign end_cnt = &cnt; //if cnt = 0xFFFF it means it reached the maximum number
 
 endmodule

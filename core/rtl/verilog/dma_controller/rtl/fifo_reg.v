@@ -28,22 +28,17 @@ output flag;
 // reg's content is expanded with the Write_or_read bit, which informs if it has been written or read in the current operation
 
 assign flag = register[REG_DEPTH];
-
-always @(posedge rst)
+	
+always @(posedge rst, posedge clk)
 begin
-	if(rst) begin register = 0; end
+	if (rst) register <= 0; 
+	else begin //Synch. Write
+		if (reg_en)  register[REG_DEPTH] <= wr_rd;
+		if (wr_rd==1)register[REG_DEPTH-1:0] <= data_in;
+	end
 end	
 
-//Synch Write
-always @(posedge clk)
-begin
-	if (reg_en) begin
-		register[REG_DEPTH] <= wr_rd;
-		if (wr_rd==1) begin //write
-			register[REG_DEPTH-1:0] <= data_in;
-		end
-	end
-end
+
 
 //Asynch Read
 always @(wr_rd,reg_en) begin
