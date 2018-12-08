@@ -288,8 +288,9 @@ end
 
 //TODO da decommentare e magari da implementare, in modo che il software sappia quando la lettura è fallita.
 always @(posedge reset or posedge dma_error_flag or posedge config_reg[START]) begin
-	if (reset | config_reg[START]) config_reg[ERROR_FLAG] <= 1'b0;
-	else if (dma_error_flag)       config_reg[ERROR_FLAG] <= 1'b1;
+	if (reset)                  config_reg[ERROR_FLAG] <= 1'b0;
+	else if (dma_error_flag)    config_reg[ERROR_FLAG] <= 1'b1;
+	else if (config_reg[START]) config_reg[ERROR_FLAG] <= 1'b0;
 end
 
 
