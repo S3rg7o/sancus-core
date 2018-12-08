@@ -11,7 +11,7 @@ output end_cnt;
 
 always @(posedge rst, posedge clk)
 begin
-	if (rst) cnt <= 0;
+	if (rst) cnt <= 'h0;
 	else begin
 	if (cnt_en) cnt <= load ? data_in : cnt+1;
 	end

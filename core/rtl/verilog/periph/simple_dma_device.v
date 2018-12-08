@@ -207,7 +207,7 @@ localparam END_OP     = 15;
 // -------------------------------------------------------------------
 // | 7 | 6 |     5      |     4     |     3      |   2   | 1 |   0   |
 // -------------------------------------------------------------------
-always @(posedge clk, posedge reset) begin
+always @(posedge clk or posedge reset) begin
    if (reset) begin 
      config_reg[14] <= 1'b0;
      config_reg[12] <= 1'b0;
@@ -232,7 +232,7 @@ always @(posedge clk, posedge reset) begin
 end
 
 // config_reg[15]
-always @(posedge clk or posedge reset or posedge config_reg[START] or posedge dma_end_flag) begin
+always @(posedge reset or posedge config_reg[START] or posedge dma_end_flag) begin
 	if (reset)                  config_reg[15] <= 1'b0;
 	else if (dma_end_flag)      config_reg[15] <= 1'b1;
     else if (config_reg[START]) config_reg[15] <= 1'b0;
@@ -240,21 +240,22 @@ always @(posedge clk or posedge reset or posedge config_reg[START] or posedge dm
 end
 
 // config_reg[13]
-always @(posedge clk or posedge reset or posedge config_reg[START] or posedge read_reg_wr or posedge dma_error_flag or posedge config_reg[ACK_SET]) begin
+always @(posedge reset or posedge config_reg[START] or posedge read_reg_wr or posedge dma_error_flag or posedge config_reg[ACK_SET]) begin
 	if (reset)   config_reg[13] <= 1'b0;
-    else if (config_reg[START])  
-                 config_reg[13] <= 1'b0;
-    else if (read_reg_wr | dma_error_flag) 
+    else if (read_reg_wr | dma_error_flag) begin
 	     if (config_reg[NON_ATOMIC])      // If non atomic operation is happening
-	             config_reg[13] <= 1'b1;  // Autoreset DEV_ACK when reading a datum or on dma_error			
+	             config_reg[13] <= 1'b1;  // Autoreset DEV_ACK when reading a datum or on dma_error	
+	     end		
 	else if (config_reg[ACK_SET])
 	     if (config_reg[NON_ATOMIC])      // Request the setting of the DEV_ACK
 	             config_reg[13] <= 1'b0;	
-    else         config_reg[13] <= config_reg[13];
+    else if (config_reg[START])  
+                 config_reg[13] <= 1'b0;
+	else         config_reg[13] <= config_reg[13];
 end 
 
 // config_reg[11]
-always @(posedge clk or posedge reset or posedge write_reg_wr or posedge dma_ack or posedge config_reg[START]) begin
+always @(posedge reset or posedge write_reg_wr or posedge dma_ack or posedge config_reg[START]) begin
 	if      (reset)              config_reg[11] <= 1'b0;
 	else if (write_reg_wr)       config_reg[11] <= 1'b0; //wait for dma_ack
 	else if (dma_ack)
@@ -266,9 +267,10 @@ end
 // config_reg[ACK_SET]
 always @(posedge clk or posedge reset or posedge config_reg[START] or posedge read_reg_wr or posedge dma_error_flag or posedge config_reg[ACK_SET]) begin
 	if (reset)   config_reg[ACK_SET] <= 1'b0;
-    else if (read_reg_wr | dma_error_flag) 
+    else if (read_reg_wr | dma_error_flag) begin
 	     if (config_reg[NON_ATOMIC])           // If non atomic operation is happening		
 	             config_reg[ACK_SET] <= 1'b0;  // Autoreset DEV_ACK when reading a datum or on dma_error
+         end
     else if (config_wr) 
                  config_reg[ACK_SET] <= per_din[ACK_SET]; 
     else         config_reg[ACK_SET] <= config_reg[ACK_SET];
@@ -287,7 +289,6 @@ end
 /*always @(posedge dma_error_flag) begin
 	config_reg[ERROR_FLAG] <= 1'b1;
 end*/
-
 
 
 assign non_atom_ack = (~config_reg[13] & config_reg[RD_WR]) | write_reg_wr;
