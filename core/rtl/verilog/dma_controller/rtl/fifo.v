@@ -66,23 +66,30 @@ end
 endgenerate	
 
 //Asynch. reset
-always @(rst) begin
-	if (rst == 1) begin
-		wr_addr = 0;
-		rd_addr = 0;
-		fifo_old_addr = 0;
-	end
-end
+//always @(rst) begin
+//	if (rst == 1) begin
+//		wr_addr = 0;
+//		rd_addr = 0;
+//		fifo_old_addr = 0;
+//	end
+//end
 
 //Update write and read addresses 
 assign increment_wr = fifo_enable & fifo_wr_rd & ~full & ~fifo_old_add_flag;
 assign increment_rd = fifo_enable & ~fifo_wr_rd & ~empty & ~fifo_old_add_flag;
 
-always @(posedge clk) begin
-		fifo_old_addr <= fifo_wr_rd ? wr_addr : 
-						fifo_old_add_flag ? fifo_old_addr : rd_addr;
-		wr_addr <= increment_wr ? wr_addr+1'b1 : wr_addr;
-		rd_addr <= increment_rd ? rd_addr+1'b1 : rd_addr; 	
+always @(posedge rst or posedge clk) begin
+		if (rst) begin
+		    wr_addr <= 0;
+		    rd_addr <= 0;
+		    fifo_old_addr <= 0;
+		end
+		else if (clk) begin
+		    fifo_old_addr <= fifo_wr_rd ? wr_addr : 
+			                 fifo_old_add_flag ? fifo_old_addr : rd_addr;
+		    wr_addr <= increment_wr ? wr_addr+1'b1 : wr_addr;
+		    rd_addr <= increment_rd ? rd_addr+1'b1 : rd_addr; 	
+		end
 end
 
 //Mux the read or write addresses
