@@ -117,8 +117,8 @@ reg  [15:0] start_addr;
 wire        start_addr_wr = reg_wr[START_ADDR];
 
 always @ (posedge clk or posedge reset)
-  if (reset)              start_addr <=  16'h0000;
-  else if (start_addr_wr) start_addr <=  per_din;
+  if (reset)              start_addr <= 16'h0000;
+  else if (start_addr_wr) start_addr <= per_din;
   else                    start_addr <= start_addr;
 
 assign dma_start_address = start_addr;
@@ -149,7 +149,7 @@ always @ (posedge clk or posedge read_reg_reset)
   else 				    read_reg <= read_reg;
 
 
-// WRITE_REG: config what to be written in the memory
+// WRITE_REG: set what has to be written in the memory
 //---------------------------------------   
 reg [15:0] write_reg;
 wire write_reg_wr    = reg_wr[WRITE_REG];
@@ -164,7 +164,7 @@ always @(posedge clk or posedge write_reg_reset)
 assign dev_out 			= write_reg;
 		
 //=============================================================
-// 4) READ DATA GENERATION
+// 4) PERIPHERAL DATA BUS - OUT GENERATION
 //=============================================================
 
 // Data output mux
@@ -230,7 +230,7 @@ always @(posedge clk or posedge reset) begin
    end 
 end
 
-// config_reg[15]
+// config_reg[15] - END OPERATION
 always @(posedge reset or posedge config_reg[START] or posedge dma_end_flag) begin
 	if (reset)                  config_reg[15] <= 1'b0;
 	else if (dma_end_flag)      config_reg[15] <= 1'b1;
@@ -238,7 +238,7 @@ always @(posedge reset or posedge config_reg[START] or posedge dma_end_flag) beg
     else                        config_reg[15] <= config_reg[15];
 end
 
-// config_reg[13]
+// config_reg[13] - ~DEV_ACK
 always @(posedge reset or posedge config_reg[START] or posedge read_reg_wr or posedge dma_error_flag or posedge config_reg[ACK_SET]) begin
 	if (reset)   config_reg[13] <= 1'b0;
     else if (read_reg_wr | dma_error_flag) begin
@@ -254,7 +254,7 @@ always @(posedge reset or posedge config_reg[START] or posedge read_reg_wr or po
 	else         config_reg[13] <= config_reg[13];
 end 
 
-// config_reg[11]
+// config_reg[11] - WRITE OK
 always @(posedge reset or posedge write_reg_wr or posedge dma_ack or posedge config_reg[START]) begin
 	if      (reset)              config_reg[11] <= 1'b0;
 	else if (write_reg_wr)       config_reg[11] <= 1'b0; //wait for dma_ack
@@ -286,7 +286,7 @@ always @(posedge clk or posedge reset or posedge dma_end_flag) begin
 end
 
 
-//TODO da decommentare e magari da implementare, in modo che il software sappia quando la lettura è fallita.
+//config_reg[ERROR_FLAG]
 always @(posedge reset or posedge dma_error_flag or posedge config_reg[START]) begin
 	if (reset)                  config_reg[ERROR_FLAG] <= 1'b0;
 	else if (dma_error_flag)    config_reg[ERROR_FLAG] <= 1'b1;
