@@ -561,7 +561,6 @@ parameter KEY_IDX_SIZE = $clog2(`SECURITY / 16 + 1);
 wire [KEY_IDX_SIZE-1:0] sm_key_idx;
 wire [0:`SECURITY-1] sm_key;
 
-// mux to send 'mab' or 'dma_addr' to the MAL circuit
 wire [15:0] dma_addr_extended = {dma_addr,1'b0}; //XXX (Sergio) remember that DMA_ADDR it's a logical address, therefore its last bit it's  
 // fictitious; infact the physical address of the word to be accessed is contained in [15:1] DMA_ADDR. It's DMA_WE that decides which byte
 // of the 16bits word is gonna be accessed. However, both the bytes are stored in the same mem location addressed by [15:1]DMA_ADDR, the check should be done on that. Maybe it's possible to add as last bit 1 or 0, depending on which byte one wants to access, but I think it will work the same since, as I said, both the bytes are in the same word. Furthermore, at this stage of implementation, the DMA always accesses both the bytes, as DMA_WE is either "11" or "00". So no prolbem for now.
@@ -570,6 +569,7 @@ wire dma_in_use = dma_en & dma_ready; //(sergio) It's not sufficient to just use
 // In fact, by looking into the memory_backbone you can see that EU has higher priority than ext access as DMA. 
 
 `ifdef DMA_PROTECTION_EN
+// mux to send 'mab' or 'dma_addr' to the MAL circuit
 wire [15:0] address_to_memory = dma_in_use ? dma_addr_extended : mab;
 wire [1:0]  memory_wr         = dma_in_use ? dma_we : mb_wr;
 wire        memory_en         = dma_in_use | mb_en;
