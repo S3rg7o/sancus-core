@@ -95,6 +95,7 @@ module  omsp_execution_unit (
     irq_num,
     irq_detect,
     dma_addr,                      // Direct Memory Access address
+    dma_ready,
     dma_we,
     dma_en                         // Direct Memory Access enable (high active)
 );
@@ -149,6 +150,7 @@ input        [15:0] prev_inst_pc;
 input         [3:0] irq_num;
 input               irq_detect;
 input        [15:1] dma_addr;      // Direct Memory Access address
+input               dma_ready;
 input         [1:0] dma_we;
 input               dma_en;        // Direct Memory Access enable (high active)
 
@@ -564,10 +566,13 @@ wire [15:0] dma_addr_extended = {dma_addr,1'b0}; //XXX (Sergio) remember that DM
 // fictitious; infact the physical address of the word to be accessed is contained in [15:1] DMA_ADDR. It's DMA_WE that decides which byte
 // of the 16bits word is gonna be accessed. However, both the bytes are stored in the same mem location addressed by [15:1]DMA_ADDR, the check should be done on that. Maybe it's possible to add as last bit 1 or 0, depending on which byte one wants to access, but I think it will work the same since, as I said, both the bytes are in the same word. Furthermore, at this stage of implementation, the DMA always accesses both the bytes, as DMA_WE is either "11" or "00". So no prolbem for now.
 
+wire dma_in_use = dma_en & dma_ready; //(sergio) It's not sufficient to just use dma_en as mux control signal! Infact in case of wait states the dma_en signal is still asserted (see DMA controller FSM) but the DMA is not accessing, so the MAL circuit should validate the MAB!! 
+// In fact, by looking into the memory_backbone you can see that EU has higher priority than ext access as DMA. 
+
 `ifdef DMA_PROTECTION_EN
-wire [15:0] address_to_memory = dma_en ? dma_addr_extended : mab;
-wire [1:0]  memory_wr         = dma_en ? dma_we : mb_wr;
-wire        memory_en         = dma_en | mb_en;
+wire [15:0] address_to_memory = dma_in_use ? dma_addr_extended : mab;
+wire [1:0]  memory_wr         = dma_in_use ? dma_we : mb_wr;
+wire        memory_en         = dma_in_use | mb_en;
 `else
 wire [15:0] address_to_memory = mab;
 wire [1:0]  memory_wr         = mb_wr;
