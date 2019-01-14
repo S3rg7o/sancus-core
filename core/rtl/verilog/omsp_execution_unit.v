@@ -590,9 +590,10 @@ omsp_spm_control #(
   .prev_pc                (prev_inst_pc),
   .handling_irq           (handling_irq),
   .irq_num                (irq_num),
-  .mab                    (address_to_memory), //(Sergio)
+  .address                (address_to_memory), //(Sergio)
   .mb_en                  (memory_en),         //(Sergio)
   .mb_wr                  (memory_wr),         //(Sergio)
+  .dma_en                 (dma_en),            //(Sergio)
   .update_spm             (sm_update),
   .enable_spm             (sm_enable),
   .disable_spm            (sm_disable),

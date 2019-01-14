@@ -203,9 +203,9 @@ assign address = start_address + count;
 assign dma_addr = drive_dma_addr ? ( mux_old_addr ? old_address : address) :
 					{ADD_LEN{1'bz}};// {1'b0}}; XXX: puoi mettere 1'b0 per questioni estetiche, 
 					                // meno rosso a schermo. Funziona in entrambi i modi, però 
-					                // personalmente sia meglio avere un indirizzo in alta impedenza 
-					                // che a zero, in modo tale da accorgersi nel caso si vada a 
-					                // leggerlo involontariamente
+					                // personalmente penso sia meglio avere un indirizzo in alta  
+					                // impedenza che a zero, in modo tale da accorgersi nel  
+					                // caso si vada a leggerlo involontariamente.
 
 // Counter
 counter #(.L(ADD_LEN-1)) count0 (
@@ -234,7 +234,7 @@ register #(.REG_DEPTH(ADD_LEN-1)) msp_count_reg (
 	
 //assign dev_count_reg_en = (state == READ_DEV1) & fifo_full | dev_count_reg_en_f;
 assign dev_count_reg_en = (state == WAIT_WRITE) & fifo_full | dev_count_reg_en_f;
-assign msp_count_reg_en = (state == READ_MEM)  & fifo_full | msp_count_reg_en_f;
+assign msp_count_reg_en = (state == READ_MEM)   & fifo_full | msp_count_reg_en_f;
 assign saved_value      = load_dev_or_msp ? dev_count_saved : msp_count_saved;
 
 

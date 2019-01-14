@@ -53,7 +53,7 @@ begin
 	start_device = 1'b1;
 	#1 reset = 1'b0;
 	#4 start_device = 1'b0;
-	@(posedge devReady) $display("Finished 1!!!!!!!!!!!!!!!!!!!!");
+	@(posedge devReady) $display("Finished !");
 	rdWr = 1'b0; //Test write
 	start_device = 1'b1;
 	@(posedge devReady) #7 $finish;
@@ -132,6 +132,44 @@ MSP430_sim #(	.ADD(ADD),
 			.dma_we(dmaWe),
 			.clk(clk),
 			.reset(reset));
+			
+			
+// DMA state for testbench
+wire  [4:0] dma_cntrl_state		= dma_controller_tv.dut.state; // Take the DMA controller state
+reg [8*32-1:0] dma_state;  
+   
+always @(dma_cntrl_state)
+	case(dma_cntrl_state)
+		0	: dma_state   = "IDLE";
+		1	: dma_state   = "GET_REGS";
+		2	: dma_state   = "LOAD_DMA_ADD";
+		3	: dma_state   = "READ_MEM";
+		4	: dma_state   = "ERROR";
+		5	: dma_state   = "OLD_ADDR_RD";
+		6	: dma_state   = "SEND_TO_DEV0";
+		7	: dma_state   = "WAIT_READ";
+		8	: dma_state   = "SEND_TO_DEV1";
+		9	: dma_state   = "NOP";
+		10	: dma_state   = "END_READ";
+		11	: dma_state   = "READ_DEV0";
+		12	: dma_state   = "READ_DEV1";
+		13	: dma_state   = "WAIT_WRITE";
+		14	: dma_state   = "SEND_TO_MEM0";
+		15	: dma_state   = "SEND_TO_MEM1";
+		16	: dma_state   = "OLD_ADDR_WR";
+		17	: dma_state   = "END_WRITE";
+		26  : dma_state   = "FIFO_FULL_RD";
+		18	: dma_state   = "WAIT_DEV";
+		19	: dma_state   = "EMPTY_FIFO_READ";
+		25  : dma_state   = "RESTORE_MSP_COUNT";
+		20	: dma_state   = "RESET";      	
+		21  : dma_state   = "FIFO_FULL_WR";
+		22  : dma_state   = "EMPTY_FIFO_WRITE";
+		23  : dma_state   = "OLD_ADDR_EMP_FIFO_W";	
+		24  : dma_state   = "RESTORE_DEV_COUNT";
+	default : dma_state   = "XXXXX";
+	endcase
+
 
 
 endmodule

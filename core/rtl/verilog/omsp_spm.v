@@ -8,9 +8,10 @@ module omsp_spm(
   input  wire                    puc_rst,
   input  wire             [15:0] pc,
   input  wire             [15:0] prev_pc,
-  input  wire             [15:0] mab,
+  input  wire             [15:0] address,
   input  wire                    mb_en,
   input  wire              [1:0] mb_wr,
+  input  wire                    dma_en,
   input  wire                    update_spm,
   input  wire                    enable_spm,
   input  wire                    disable_spm,
@@ -121,8 +122,8 @@ begin
 end
 
 wire exec_public = exec_spm(pc);
-wire access_public = mb_en & (mab >= public_start) & (mab < public_end);
-wire access_secret = mb_en & (mab >= secret_start) & (mab < secret_end);
+wire access_public = mb_en & (address >= public_start) & (address < public_end);
+wire access_secret = mb_en & (address >= secret_start) & (address < secret_end);
 wire mem_violation = (access_public & ~(enable_spm | disable_spm | verify_spm |
                                         (executing & ~mb_wr)) |
                      (access_secret & ~exec_public));
@@ -132,7 +133,9 @@ wire create_violation = check_new_spm &
                          //do_overlap(r12, r13, secret_start, secret_end) |
                          //do_overlap(r14, r15, public_start, public_end) |
                          //do_overlap(r14, r15, secret_start, secret_end));
-assign violation = enabled & (mem_violation | exec_violation | create_violation);
+wire dma_violation = dma_en & (access_public | access_secret); //Sergio: when the dma_en is enable, prevent any access to the protected memory
+ 
+assign violation = enabled & (mem_violation | exec_violation | create_violation | dma_violation);
 assign executing = enabled & exec_public;
 
 always @(posedge mclk)
@@ -141,7 +144,7 @@ begin
   begin
     if (mem_violation)
     begin
-      $write("mem violation @0x%h, from ", mab);
+      $write("mem violation @0x%h, from ", address);
       if (handling_irq) $display("IRQ");
       else              $display("0x%h", pc);
     end
