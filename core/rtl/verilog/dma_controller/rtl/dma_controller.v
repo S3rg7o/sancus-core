@@ -518,6 +518,7 @@ always @(state,dma_ready) begin
 			fifo_en <= 1'b1;		
 			old_addr_reg_en <= 1'b1;
 			out_to_msp <= 1'b1;
+			$display("Send to mem");
 		end
 		OLD_ADDR_WR :
 		begin

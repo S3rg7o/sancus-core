@@ -10,10 +10,11 @@ module omsp_spm_control(
   input  wire             [15:0] prev_pc,
   input  wire                    handling_irq,
   input  wire              [3:0] irq_num,
-  input  wire             [15:0] address,
+  input  wire             [15:0] mab,
   input  wire                    mb_en,
   input  wire              [1:0] mb_wr,
   input  wire                    dma_en,
+  input  wire             [15:0] dma_addr,
   input  wire                    update_spm,
   input  wire                    enable_spm,
   input  wire                    disable_spm,
@@ -31,6 +32,7 @@ module omsp_spm_control(
   input  wire             [15:0] key_in,
   input  wire [KEY_IDX_SIZE-1:0] key_idx,
   output wire                    violation,
+  output wire                    dma_violation,
   output wire                    spm_data_select_valid,
   output wire                    spm_key_select_valid,
   output reg              [15:0] spm_current_id,
@@ -55,6 +57,8 @@ wire [0:`NB_SPMS-1] spms_first_disabled;
 wire [0:`NB_SPMS-1] spms_enabled;
 // output of the SPM array. violations detected by the SPMs
 wire [0:`NB_SPMS-1] spms_violation;
+// output of the SPM array. violations detected by the SPMs
+wire [0:`NB_SPMS-1] spms_dma_violation;
 
 wire [0:`NB_SPMS-1] spms_data_selected;
 wire [0:`NB_SPMS-1] spms_key_selected;
@@ -77,6 +81,7 @@ always @(posedge mclk or posedge puc_rst)
     next_id <= next_id + 16'h1;
 
 assign violation = |spms_violation || (next_id == 16'hfff0);
+assign dma_violation = |spms_dma_violation;
 
 generate
   genvar i;
@@ -149,10 +154,11 @@ omsp_spm #(
   .puc_rst              (puc_rst),
   .pc                   (pc),
   .prev_pc              (prev_pc),
-  .address              (address),
+  .mab                  (mab),
   .mb_en                (mb_en),
   .mb_wr                (mb_wr),
   .dma_en               (dma_en),
+  .dma_addr             (dma_addr),
   .update_spm           (spms_update),
   .enable_spm           (enable_spm),
   .disable_spm          (disable_spm),
@@ -175,6 +181,7 @@ omsp_spm #(
   .enabled              (spms_enabled),
   .executing            (spms_executing),
   .violation            (spms_violation),
+  .dma_violation        (spms_dma_violation),
   .data_selected        (spms_data_selected),
   .key_selected         (spms_key_selected),
   .requested_data       (spms_requested_data),

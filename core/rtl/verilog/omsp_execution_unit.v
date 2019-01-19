@@ -60,7 +60,8 @@ module  omsp_execution_unit (
     pc_sw_wr,                      // Program counter software write
     scg0,                          // System clock generator 1. Turns off the DCO
     scg1,                          // System clock generator 1. Turns off the SMCLK
-    violation,
+    violation,                     // SM violation signal
+    dma_violation,                 // DMA violation signal
     sm_busy,
     exec_sm,
 
@@ -114,7 +115,8 @@ output       [15:0] pc_sw;         // Program counter software value
 output              pc_sw_wr;      // Program counter software write
 output              scg0;          // System clock generator 1. Turns off the DCO
 output              scg1;          // System clock generator 1. Turns off the SMCLK
-output              violation;
+output              violation;     // SM violation signal
+output              dma_violation; // DMA violation signal
 output              sm_busy;
 output              exec_sm;
 
@@ -565,10 +567,7 @@ wire [15:0] dma_addr_extended = {dma_addr,1'b0}; //XXX (Sergio) remember that DM
 // fictitious; infact the physical address of the word to be accessed is contained in [15:1] DMA_ADDR. It's DMA_WE that decides which byte
 // of the 16bits word is gonna be accessed. However, both the bytes are stored in the same mem location addressed by [15:1]DMA_ADDR, the check should be done on that. Maybe it's possible to add as last bit 1 or 0, depending on which byte one wants to access, but I think it will work the same since, as I said, both the bytes are in the same word. Furthermore, at this stage of implementation, the DMA always accesses both the bytes, as DMA_WE is either "11" or "00". So no prolbem for now.
 
-/*wire dma_in_use; //(sergio) It's not sufficient to just use dma_en as mux control signal! Infact in case of wait states the dma_en signal is still asserted (see DMA controller FSM) but the DMA is not accessing, so the MAL circuit should validate the MAB!! 
-// In fact, by looking into the memory_backbone you can see that EU has higher priority than ext access as DMA. 
-assign dma_in_use = dma_en & dma_ready;*/
-
+/* not used in the sgx-like solution: dma_addr is directly wired into the MAL, and every access in any memory location of the protected memroy is prevented from happening by raising a violation signal.
 `ifdef DMA_PROTECTION_EN
 // mux to send 'mab' or 'dma_addr' to the MAL circuit
 wire [15:0] address_to_memory = dma_en ? dma_addr_extended : mab;
@@ -579,6 +578,7 @@ wire [15:0] address_to_memory = mab;
 wire [1:0]  memory_wr         = mb_wr;
 wire        memory_en         = mb_en;
 `endif
+*/
 
 
 omsp_spm_control #(
@@ -590,10 +590,11 @@ omsp_spm_control #(
   .prev_pc                (prev_inst_pc),
   .handling_irq           (handling_irq),
   .irq_num                (irq_num),
-  .address                (address_to_memory), //(Sergio)
+  .mab                    (mab), 
   .mb_en                  (memory_en),         //(Sergio)
   .mb_wr                  (memory_wr),         //(Sergio)
   .dma_en                 (dma_en),            //(Sergio)
+  .dma_addr               (dma_addr_extended), //(Sergio)
   .update_spm             (sm_update),
   .enable_spm             (sm_enable),
   .disable_spm            (sm_disable),
@@ -611,6 +612,7 @@ omsp_spm_control #(
   .key_in                 (crypto_data_out),
   .key_idx                (sm_key_idx),
   .violation              (sm_violation),
+  .dma_violation          (dma_violation),
   .spm_data_select_valid  (sm_data_select_valid),
   .spm_key_select_valid   (sm_key_select_valid),
   .spm_current_id         (sm_current_id),

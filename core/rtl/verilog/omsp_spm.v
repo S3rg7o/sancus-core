@@ -8,10 +8,11 @@ module omsp_spm(
   input  wire                    puc_rst,
   input  wire             [15:0] pc,
   input  wire             [15:0] prev_pc,
-  input  wire             [15:0] address,
+  input  wire             [15:0] mab,
   input  wire                    mb_en,
   input  wire              [1:0] mb_wr,
   input  wire                    dma_en,
+  input  wire             [15:0] dma_addr,
   input  wire                    update_spm,
   input  wire                    enable_spm,
   input  wire                    disable_spm,
@@ -34,6 +35,7 @@ module omsp_spm(
   output reg                     enabled,
   output wire                    executing,
   output wire                    violation,
+  output wire                    dma_violation,
   output wire                    data_selected,
   output wire                    key_selected,
   output reg              [15:0] requested_data,
@@ -122,8 +124,8 @@ begin
 end
 
 wire exec_public = exec_spm(pc);
-wire access_public = mb_en & (address >= public_start) & (address < public_end);
-wire access_secret = mb_en & (address >= secret_start) & (address < secret_end);
+wire access_public = mb_en & (mab >= public_start) & (mab < public_end);
+wire access_secret = mb_en & (mab >= secret_start) & (mab < secret_end);
 wire mem_violation = (access_public & ~(enable_spm | disable_spm | verify_spm |
                                         (executing & ~mb_wr)) |
                      (access_secret & ~exec_public));
@@ -133,7 +135,9 @@ wire create_violation = check_new_spm &
                          //do_overlap(r12, r13, secret_start, secret_end) |
                          //do_overlap(r14, r15, public_start, public_end) |
                          //do_overlap(r14, r15, secret_start, secret_end));
-wire dma_violation = dma_en & (access_public | access_secret); //Sergio: when the dma_en is enable, prevent any access to the protected memory
+wire dma_access_public = dma_en & (dma_addr >= public_start) & (dma_addr < public_end);
+wire dma_access_secret = dma_en & (dma_addr >= secret_start) & (dma_addr < secret_end);                         
+assign dma_violation     = dma_access_public | dma_access_secret; //Sergio: prevent any DMA access to the protected memory
  
 assign violation = enabled & (mem_violation | exec_violation | create_violation | dma_violation);
 assign executing = enabled & exec_public;
@@ -144,7 +148,7 @@ begin
   begin
     if (mem_violation)
     begin
-      $write("mem violation @0x%h, from ", address);
+      $write("mem violation @0x%h, from ", mab);
       if (handling_irq) $display("IRQ");
       else              $display("0x%h", pc);
     end

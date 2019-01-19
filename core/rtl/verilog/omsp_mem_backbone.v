@@ -94,7 +94,9 @@ module  omsp_mem_backbone (
     pmem_dout,                      // Program Memory data output
     puc_rst,                        // Main system reset
     scan_enable,                    // Scan enable (active during scan shifting)
-    violation
+    sm_violation,                   // SM  violation signal, from MAL
+    dma_violation                   // DMA violation signal, from MAL
+
 );
 
 // OUTPUTs
@@ -146,7 +148,8 @@ input         [15:0] per_dout;      // Peripheral data output
 input         [15:0] pmem_dout;     // Program Memory data output
 input                puc_rst;       // Main system reset
 input                scan_enable;   // Scan enable (active during scan shifting)
-input                violation;
+input                sm_violation;  // SM  violation signal, from MAL
+input                dma_violation  // DMA violation signal, from MAL
 
 wire                 ext_mem_en;
 wire          [15:0] ext_mem_din;
@@ -169,7 +172,7 @@ wire                 ext_per_en;
 assign      cpu_halt_cmd  =  dbg_halt_cmd | (dma_en & dma_priority);
 
 // Return ERROR response if address lays outside the memory spaces (Peripheral, Data & Program memories)
-assign      dma_resp      = (~dbg_mem_en & ~(ext_dmem_sel | ext_pmem_sel | ext_per_sel) | violation) & dma_en;
+assign      dma_resp      = (~dbg_mem_en & ~(ext_dmem_sel | ext_pmem_sel | ext_per_sel) | dma_violation) & dma_en;
 
 // Master interface access is ready when the memory access occures
 assign      dma_ready     = ~dbg_mem_en &  (ext_dmem_en  | ext_pmem_en  | ext_per_en | dma_resp);
@@ -223,7 +226,7 @@ parameter          DMEM_END      = `DMEM_BASE+`DMEM_SIZE;
 // Execution unit access
 wire               eu_dmem_sel   = (eu_mab>=(`DMEM_BASE>>1)) &
                                    (eu_mab< ( DMEM_END >>1));
-wire               eu_dmem_en    = eu_mb_en & eu_dmem_sel;
+wire               eu_dmem_en    = eu_mb_en & eu_dmem_sel & ~sm_violation;
 wire        [15:0] eu_dmem_addr  = {1'b0, eu_mab}-(`DMEM_BASE>>1);
 
 // Front-end access
@@ -232,12 +235,12 @@ wire        [15:0] eu_dmem_addr  = {1'b0, eu_mab}-(`DMEM_BASE>>1);
 // External Master/Debug interface access
 assign             ext_dmem_sel  = (ext_mem_addr[15:1]>=(`DMEM_BASE>>1)) &
                                    (ext_mem_addr[15:1]< ( DMEM_END >>1));
-assign             ext_dmem_en   = ext_mem_en &  ext_dmem_sel & ~eu_dmem_en;
+assign             ext_dmem_en   = ext_mem_en &  ext_dmem_sel & ~eu_dmem_en & ~dma_violation;
 wire        [15:0] ext_dmem_addr = {1'b0, ext_mem_addr[15:1]}-(`DMEM_BASE>>1);
 
    
 // RAM Interface
-wire               dmem_cen      = ~(ext_dmem_en | eu_dmem_en) | violation;	
+wire               dmem_cen      = ~(ext_dmem_en | eu_dmem_en) ;	
 wire         [1:0] dmem_wen      = ext_dmem_en ? ~ext_mem_wr                : ~eu_mb_wr;
 wire [`DMEM_MSB:0] dmem_addr     = ext_dmem_en ? ext_dmem_addr[`DMEM_MSB:0] : eu_dmem_addr[`DMEM_MSB:0];
 wire        [15:0] dmem_din      = ext_dmem_en ? ext_mem_dout : eu_mdb_out;
@@ -252,7 +255,7 @@ parameter          PMEM_OFFSET   = (16'hFFFF-`PMEM_SIZE+1);
 // NOTE: pmem requests from the execution are masked on violation (e.g. no
 // writes to SM public section)
 wire               eu_pmem_sel   = (eu_mab>=(PMEM_OFFSET>>1));
-wire               eu_pmem_en    = eu_mb_en & eu_pmem_sel & ~violation;
+wire               eu_pmem_en    = eu_mb_en & eu_pmem_sel & ~sm_violation;
 wire        [15:0] eu_pmem_addr  = eu_mab-(PMEM_OFFSET>>1);
 
 // Front-end access
@@ -266,7 +269,7 @@ wire        [15:0] fe_pmem_addr  = fe_mab-(PMEM_OFFSET>>1);
 // Debug interface access
 // NOTE: debug pmem accesses are masked on violation
 assign 			   ext_pmem_sel=(ext_mem_addr[15:1]>=(PMEM_OFFSET>>1));
-assign             ext_pmem_en  = ext_mem_en & ext_pmem_sel & ~eu_pmem_en & ~fe_pmem_en & ~violation;
+assign             ext_pmem_en  = ext_mem_en & ext_pmem_sel & ~eu_pmem_en & ~fe_pmem_en & ~dma_violation;
 
 wire        [15:0] ext_pmem_addr = {1'b0, ext_mem_addr[15:1]}-(PMEM_OFFSET>>1);
 
@@ -276,7 +279,7 @@ wire               pmem_cen      = ~(fe_pmem_en | eu_pmem_en | ext_pmem_en);
 wire         [1:0] pmem_wen      = ext_pmem_en ? ~ext_mem_wr : (eu_pmem_en ? ~eu_mb_wr : 2'b11); //(sergio) corretto
 wire [`PMEM_MSB:0] pmem_addr     = ext_pmem_en ? ext_pmem_addr[`PMEM_MSB:0] :
                                    eu_pmem_en  ? eu_pmem_addr[`PMEM_MSB:0]  : fe_pmem_addr[`PMEM_MSB:0];
-wire        [15:0] pmem_din      = ext_pmem_en ? ext_mem_dout : eu_mdb_out; //(sergio) nel nuovo msp430 eu non può scrivere in PMEM (riga #276)
+wire        [15:0] pmem_din      = ext_pmem_en ? ext_mem_dout : eu_mdb_out; //(sergio) nel nuovo msp430 eu non può scrivere in PMEM (riga #276), qui invece si
 
 wire               fe_pmem_wait  = (fe_pmem_en & eu_pmem_en);
 wire               pmem_writing  = eu_pmem_en & |eu_mb_wr;
@@ -367,7 +370,7 @@ wire [15:0]     raw_eu_mdb_in = eu_mdb_in_sel[1] ? pmem_dout    :
 reg do_mask_eu;
 always @(posedge mclk or posedge puc_rst)
   if (puc_rst)           do_mask_eu <= 0;
-  else if (violation) do_mask_eu <= 1;
+  else if (sm_violation) do_mask_eu <= 1;
   else if (eu_dmem_en) do_mask_eu <= 0;
 
 wire [15:0] eu_mask = do_mask_eu ? 16'h0000 : 16'hffff;

@@ -365,7 +365,6 @@ omsp_frontend frontend_0 (
     .prev_inst_pc    (prev_inst_pc),
     .irq_num         (irq_num),
     .irq_detect      (irq_detect),
-    .dma_violation   (dma_violation),
 			     
 // INPUTs
     .cpu_en_s     (cpu_en_s),      // Enable CPU code execution (synchronous)
@@ -390,8 +389,9 @@ omsp_frontend frontend_0 (
     .wkup         (wkup),          // System Wake-up (asynchronous)
     .spm_busy     (spm_busy),
     .pmem_writing (pmem_writing),
-    .exec_sm      (exec_sm_eu),
-    .violation    (spm_violation_eu)
+    .exec_sm      (exec_sm_eu),  
+    .violation    (spm_violation_eu), // SM  violation signal, from MAL
+    .dma_violation (dma_violation)    // DMA violation signal, from MAL
 );
 
 
@@ -414,6 +414,7 @@ omsp_execution_unit execution_unit_0 (
     .scg0         (scg0),          // System clock generator 1. Turns off the DCO
     .scg1         (scg1),          // System clock generator 1. Turns off the SMCLK
     .violation    (spm_violation_eu),
+    .dma_violation (dma_violation),             
     .sm_busy      (spm_busy),
     .exec_sm      (exec_sm_eu),
 
@@ -508,7 +509,8 @@ omsp_mem_backbone mem_backbone_0 (
     .puc_rst      (puc_rst),       // Main system reset
     .scan_enable  (scan_enable),   // Scan enable (active during scan shifting)
     // violation signal is buffered in front-end for remainder of instruction
-    .violation    (sm_irq | dma_violation)
+    .sm_violation  (sm_irq),        // SM violation signal, from MAL
+    .dma_violation (dma_violation) // DMA violation signal, from MAL
 );
 
 //=============================================================================

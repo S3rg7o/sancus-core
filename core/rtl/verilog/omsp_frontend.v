@@ -81,7 +81,6 @@ module  omsp_frontend (
     prev_inst_pc,
     irq_num,
     irq_detect,
-    dma_violation,
 
 // INPUTs
     cpu_en_s,                      // Enable CPU code execution (synchronous)
@@ -107,7 +106,8 @@ module  omsp_frontend (
     spm_busy,
     pmem_writing,
     exec_sm,
-    violation
+    violation,
+    dma_violation
 );
 
 // OUTPUTs
@@ -145,7 +145,6 @@ output       [15:0] current_inst_pc;
 output       [15:0] prev_inst_pc;
 output        [3:0] irq_num;
 output              irq_detect;
-output              dma_violation;
 
 // INPUTs
 //=========
@@ -324,9 +323,7 @@ always @(posedge mclk or posedge puc_rst)
 //
 // 4.1) INTERRUPT HANDLING
 //-----------------------------------------
-wire    sm_violation;
-assign  sm_violation  = dma_en ? 1'b0 : violation;
-assign  dma_violation = dma_en ? violation : 1'b0;
+wire    sm_violation = violation;
 
 // Detect reset interrupt
 reg     inst_irq_rst;
@@ -346,9 +343,23 @@ always @(posedge mclk or posedge puc_rst)
 // NOTE: clocked register is only updated one cycle after violation
 assign  sm_irq      = (sm_irq_reg | sm_violation);
 wire    do_sm_irq   = sm_irq & ~inst_so[`IRQ];
+  
+// Buffer DMA violation IRQ in a register to make sure the interrupt is handled
+// after the offending instruction has completed (eg. mov &illegal, &valid)
+reg     dma_irq_reg;
+always @(posedge mclk or posedge puc_rst)
+  if (puc_rst)            dma_irq_reg <= 1'b0;
+  else if (exec_done)     dma_irq_reg <= 1'b0;
+  else if (dma_violation) dma_irq_reg <= 1'b1;  
+// Only treat violation as interrupt request when not caused by hw IRQ logic
+// NOTE: clocked register is only updated one cycle after violation
+wire  dma_viol_irq     = (dma_irq_reg | dma_violation);
+wire  do_dma_irq       = dma_viol_irq & ~inst_so[`IRQ];
+
+
 
 //  Detect other interrupts
-wire    irq_pnd     = (dma_violation | do_sm_irq | nmi_pnd | ((|irq | wdt_irq) & gie));
+wire    irq_pnd     = (do_dma_irq | do_sm_irq | nmi_pnd | ((|irq | wdt_irq) & gie));
 assign  irq_detect  = irq_pnd
                       & ~cpu_halt_req & ~dbg_halt_st
                       & (exec_done | (i_state==I_IDLE));
@@ -371,7 +382,7 @@ always @(posedge mclk_irq_num or posedge puc_rst)
   else if (irq_detect) irq_num <= nmi_pnd                  ?  4'he :
 `endif
                                  (irq[13] | sm_irq)        ?  4'hd :
-                                 (irq[12] | dma_violation) ?  4'hc :
+                                 (irq[12] | dma_viol_irq)  ?  4'hc :
                                   irq[11]                  ?  4'hb :
                                  (irq[10] | wdt_irq)       ?  4'ha :
                                   irq[9]                   ?  4'h9 :

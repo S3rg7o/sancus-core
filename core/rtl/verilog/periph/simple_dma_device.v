@@ -270,7 +270,7 @@ always @(posedge clk or posedge reset or posedge read_reg_wr or posedge dma_erro
 	if (reset)   config_reg[ACK_SET] <= 1'b0;
     else if (read_reg_wr | dma_error_flag) begin
 	     if (config_reg[NON_ATOMIC])           // If non atomic operation is happening		
-	             config_reg[ACK_SET] <= 1'b0;  // Autoreset DEV_ACK when reading a datum or on dma_error
+	             config_reg[ACK_SET] <= 1'b0;  // autoreset DEV_ACK when reading a datum or on dma_error
          end
     else if (config_wr) 
                  config_reg[ACK_SET] <= per_din[ACK_SET]; 
