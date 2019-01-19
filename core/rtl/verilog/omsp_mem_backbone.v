@@ -96,7 +96,6 @@ module  omsp_mem_backbone (
     scan_enable,                    // Scan enable (active during scan shifting)
     sm_violation,                   // SM  violation signal, from MAL
     dma_violation                   // DMA violation signal, from MAL
-
 );
 
 // OUTPUTs
@@ -149,7 +148,7 @@ input         [15:0] pmem_dout;     // Program Memory data output
 input                puc_rst;       // Main system reset
 input                scan_enable;   // Scan enable (active during scan shifting)
 input                sm_violation;  // SM  violation signal, from MAL
-input                dma_violation  // DMA violation signal, from MAL
+input                dma_violation;  // DMA violation signal, from MAL
 
 wire                 ext_mem_en;
 wire          [15:0] ext_mem_din;
