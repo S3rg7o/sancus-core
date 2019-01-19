@@ -106,7 +106,7 @@ module  omsp_frontend (
     spm_busy,
     pmem_writing,
     exec_sm,
-    violation,
+    sm_violation,
     dma_violation
 );
 
