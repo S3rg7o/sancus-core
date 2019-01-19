@@ -591,8 +591,8 @@ omsp_spm_control #(
   .handling_irq           (handling_irq),
   .irq_num                (irq_num),
   .mab                    (mab), 
-  .mb_en                  (memory_en),         //(Sergio)
-  .mb_wr                  (memory_wr),         //(Sergio)
+  .mb_en                  (mb_en),         //(Sergio)
+  .mb_wr                  (mb_wr),         //(Sergio)
   .dma_en                 (dma_en),            //(Sergio)
   .dma_addr               (dma_addr_extended), //(Sergio)
   .update_spm             (sm_update),

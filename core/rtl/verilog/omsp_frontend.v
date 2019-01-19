@@ -171,9 +171,8 @@ input               wkup;          // System Wake-up (asynchronous)
 input               spm_busy;
 input               pmem_writing;
 input               exec_sm;
-input               violation;	   // Memory violations signal, both DMA and SM.
-                                   // Its content is decoded at #325-#328 
-
+input               violation;	   // SM violation signal 
+input               dma_violation; // DMA violation signal
 
 //=============================================================================
 // 1)  UTILITY FUNCTIONS
