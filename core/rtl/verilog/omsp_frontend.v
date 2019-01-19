@@ -171,7 +171,7 @@ input               wkup;          // System Wake-up (asynchronous)
 input               spm_busy;
 input               pmem_writing;
 input               exec_sm;
-input               violation;	   // SM violation signal 
+input               sm_violation;  // SM violation signal 
 input               dma_violation; // DMA violation signal
 
 //=============================================================================
@@ -322,7 +322,7 @@ always @(posedge mclk or posedge puc_rst)
 //
 // 4.1) INTERRUPT HANDLING
 //-----------------------------------------
-wire    sm_violation = violation;
+
 
 // Detect reset interrupt
 reg     inst_irq_rst;

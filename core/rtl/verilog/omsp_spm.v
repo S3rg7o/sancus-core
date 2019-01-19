@@ -139,7 +139,7 @@ wire dma_access_public = dma_en & (dma_addr >= public_start) & (dma_addr < publi
 wire dma_access_secret = dma_en & (dma_addr >= secret_start) & (dma_addr < secret_end);                         
 assign dma_violation     = dma_access_public | dma_access_secret; //Sergio: prevent any DMA access to the protected memory
  
-assign violation = enabled & (mem_violation | exec_violation | create_violation | dma_violation);
+assign violation = enabled & (mem_violation | exec_violation | create_violation);
 assign executing = enabled & exec_public;
 
 always @(posedge mclk)
