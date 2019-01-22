@@ -502,7 +502,7 @@ omsp_mem_backbone mem_backbone_0 (
     .dma_addr     (dma_addr),      // Direct Memory Access address
     .dma_din      (dma_din),       // Direct Memory Access data input
     .dma_en       (dma_en),        // Direct Memory Access enable (high active)
-    .dma_priority (dma_priority),  // Direct Memory Access priority (0:low / 1:high)
+    .dma_priority (1'b0),          // Direct Memory Access priority (0:low / 1:high) (Sergio)  --> hardwired low priority. the dma_driority signal comes from the DMA controller, which is not included in the TCB. Thus, the mem_backbone.dma_priority signal is so important that cannot be driven from an untrusted device, since burst mode CANNOT be handled to not worsen availability of the CPU
     .dma_we       (dma_we),        // Direct Memory Access write byte enable (high active)
     .per_dout     (per_dout_or),   // Peripheral data output
     .pmem_dout    (pmem_dout),     // Program Memory data output

@@ -126,9 +126,8 @@ end
 wire exec_public = exec_spm(pc);
 wire access_public = mb_en & (mab >= public_start) & (mab < public_end);
 wire access_secret = mb_en & (mab >= secret_start) & (mab < secret_end);
-wire mem_violation = (access_public & ~(enable_spm | disable_spm | verify_spm |
-                                        (executing & ~mb_wr)) |
-                     (access_secret & ~exec_public));
+wire mem_violation = (access_public & ~(enable_spm | disable_spm | verify_spm | (executing & ~mb_wr)) 
+                   | (access_secret & ~exec_public) );
 wire exec_violation = exec_public & ~exec_spm(prev_pc) & (pc != public_start);
 wire create_violation = check_new_spm &
                         (do_overlap(r12, r13, public_start, public_end));// |

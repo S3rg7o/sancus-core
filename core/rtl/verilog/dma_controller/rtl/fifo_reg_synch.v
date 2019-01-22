@@ -1,4 +1,7 @@
-module fifo_reg_synch (
+// synchronous fifo register
+
+
+module fifo_reg (
 	clk,
 	reg_en,
 	wr_rd,

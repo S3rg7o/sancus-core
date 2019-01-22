@@ -34,7 +34,8 @@ module dma_controller (
 
 parameter ADD_LEN = 16; // Number of bits for the addresses
 parameter DATA_LEN = 16; // Number of bits for the data
-parameter FIFO_DEPTH = 5; // 2^FIFO_DEPTH = regs in the FIFO.
+// 2^FIFO_DEPTH = regs in the FIFO.
+parameter FIFO_DEPTH = $clog2(`DMEM_SIZE>>9); // The default choice for the FIFO depth is to have it = DMEM_SIZE / 512,  so that when a 16-kB the data memory is used, the controller internal buffer would be of 32 bytes
 parameter FIFO_DIV_FACTOR = 3; // by default divide by 8
 
 input clk, reset;

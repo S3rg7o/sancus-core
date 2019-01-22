@@ -458,7 +458,7 @@ openMSP430 dut (
 
 
 `ifdef DMA_CONTR_TEST // Include the dma_controller.v and a simple device to test it.
-parameter FIFO_DEPTH = 5;
+parameter FIFO_DEPTH = 6; // ---> the number of register is = 2^FIFO_DEPTH
 
 wire [14:0] dma_num_words;
 wire [15:0]	dma_start_address;
