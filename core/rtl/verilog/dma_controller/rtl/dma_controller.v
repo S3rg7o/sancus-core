@@ -4,6 +4,7 @@ module dma_controller (
 	// Inputs from Device
 	num_words,
 	start_addr,
+	mmio_input_addr,
 	rd_wr,
 	rqst,
 	dev_ack,
@@ -36,7 +37,7 @@ parameter ADD_LEN = 16; // Number of bits for the addresses
 parameter DATA_LEN = 16; // Number of bits for the data
 // 2^FIFO_DEPTH = regs in the FIFO.
 parameter FIFO_DEPTH = $clog2(`DMEM_SIZE>>9); // The default choice for the FIFO depth is to have it = DMEM_SIZE / 512,  so that when a 16-kB the data memory is used, the controller internal buffer would be of 32 bytes
-parameter FIFO_DIV_FACTOR = 3; // by default divide by 8
+parameter FIFO_DIV_FACTOR = (FIFO_DEPTH > 8) ? 3 : 2; // by default divide by 8. Se ho solo 8 registri, dividi per 2.
 
 input clk, reset;
 
@@ -45,9 +46,10 @@ input [ADD_LEN-1:0] num_words;  // 1) I should be able to write at max. as many 
 								// which you write onto FIFO_DEPTH bits.
 								// 2) Or num_words can bigger and let FIFO_FULL FSM-branch handle the situation.It's up to you. +++
 								
-input [ADD_LEN:0] start_addr;
-wire [ADD_LEN-1:0] start_addr_shifted = start_addr >> 1; // In the memory backbone dma_addr[15:1], so it's considered
-														 // as multiplied by 2. To be consistent, now I divide it
+input [ADD_LEN:0]   start_addr;
+wire  [ADD_LEN-1:0] start_addr_shifted = start_addr >> 1; // In the memory backbone dma_addr[15:1], so it's considered as multiplied by 2. To be consistent, now I divide it
+input [ADD_LEN:0]   mmio_input_addr; //starting address for mmio operations
+wire  [ADD_LEN-1:0] mmio_add_shifted = mmio_input_addr >> 1; // In the memory backbone dma_addr[15:1], so it's considered as multiplied by 2. To be consistent, now I divide it
 
 input rd_wr;
 input rqst;
@@ -84,11 +86,18 @@ reg fifo_en, fifo_wr_rd;
 //-----------------------------
 wire [ADD_LEN-1:0] start_address;
 wire [ADD_LEN-1:0] address;
-reg addr0_rst, addr0_reg_en;
+reg  addr0_rst, addr0_reg_en;
+
+// MMIO address register 
+//-----------------------------
+wire [ADD_LEN-1:0] mmio_address;
+reg  mmio_add_rst, mmio_add_en, mmio_ff_en, mmio_ff_rst;
+wire mmio_flag, mmio_mux_reg;
+
 // Old Address register
 //-----------------------------
 wire [ADD_LEN-1:0] old_address;
-reg old_addr_reg_en, old_addr_rst;
+reg  old_addr_reg_en, old_addr_rst;
 // Flip-flop Mux Add
 //-----------------------------
 reg mux_old_addr;
@@ -110,7 +119,7 @@ reg msp_count_reg_en_f, dev_count_reg_en_f; //flags to enable counter saving whe
 reg dev_count_rst, msp_count_rst;
 // FSM control logic  
 //-----------------------------
-wire security_violation;
+wire num_words_null;
 reg flag_cnt_words, flag_cnt_words_mem; //end-counts for the FSM
 reg out_to_msp; //1: FIFO out to DMA || 0: FIFO out to DEV
 reg drive_dma_addr; //0: dma_addr = 'hz || 1: dma_addr
@@ -118,37 +127,37 @@ reg drive_dma_addr; //0: dma_addr = 'hz || 1: dma_addr
 // FSM States Definition
 reg [4:0]state, next_state; //just codifies the states
 
-localparam 	IDLE  = 0,
-			GET_REGS  = 1,
+localparam 	IDLE                = 0,
+			GET_REGS            = 1,
 			// Read
-			LOAD_DMA_ADD = 2,
-			READ_MEM  = 3,
-			ERROR  = 4,
-			OLD_ADDR_RD  = 5,
-			SEND_TO_DEV0  = 6,
-			WAIT_READ  = 7,
-			SEND_TO_DEV1  = 8,
-			NOP  = 9,
-			END_READ  = 10,
+			LOAD_DMA_ADD        = 2,
+			READ_MEM            = 3,
+			ERROR               = 4,
+			OLD_ADDR_RD         = 5,
+			SEND_TO_DEV0        = 6,
+			WAIT_READ           = 7,
+			SEND_TO_DEV1        = 8,
+			NOP                 = 9,
+			END_READ            = 10,
 			//Write
-			READ_DEV0  = 11,
-			READ_DEV1  = 12,
-			WAIT_WRITE  = 13,
-			SEND_TO_MEM0  = 14,
-			SEND_TO_MEM1  = 15,
-			OLD_ADDR_WR  = 16,
-			END_WRITE  = 17,
+			READ_DEV0           = 11,
+			READ_DEV1           = 12,
+			WAIT_WRITE          = 13,
+			SEND_TO_MEM0        = 14,
+			SEND_TO_MEM1        = 15,
+			OLD_ADDR_WR         = 16,
+			END_WRITE           = 17,
 			// Fifo full
-			FIFO_FULL_RD = 26,
-			WAIT_DEV  = 18,
-			EMPTY_FIFO_READ  = 19,
-			RESTORE_MSP_COUNT = 25,
+			FIFO_FULL_RD        = 26,
+			WAIT_DEV            = 18,
+			EMPTY_FIFO_READ     = 19,
+			RESTORE_MSP_COUNT   = 25,
 			//
-			FIFO_FULL_WR  = 21,
-			EMPTY_FIFO_WRITE  = 22,
+			FIFO_FULL_WR        = 21,
+			EMPTY_FIFO_WRITE    = 22,
 			OLD_ADDR_EMP_FIFO_W = 23,
-			RESTORE_DEV_COUNT = 24,
-			RESET  = 20;	
+			RESTORE_DEV_COUNT   = 24,
+			RESET               = 20;	
 
 //--------------------------------//
 //--------------------------------//
@@ -161,7 +170,7 @@ assign dma_out = out_to_msp ? fifo_out : {DATA_LEN{1'bz}};
 assign dev_out = out_to_msp ? {DATA_LEN{1'bz}} : fifo_out;
 assign fifo_in = out_to_msp ? dev_in : dma_in;
 // Check NUM_WORDS and ADDRESS validity 
-assign security_violation = ~|num_words; //if words = 0x0000 then do not even start the count, it will access forever the memory 
+assign num_words_null = ~|num_words; //if words = 0x0000 then do not even start the count, it will access forever the memory 
 
 fifo #(	.DATA(DATA_LEN), 
 		.ADDR_SIZE(FIFO_DEPTH),
@@ -199,8 +208,26 @@ register #(.REG_DEPTH(ADD_LEN)) old_addr0 (
 				.rst(old_addr_rst),
 				.data_out(old_address));
 
-								
-assign address = start_address + count;
+register #(.REG_DEPTH(ADD_LEN)) mmio_addr0 (
+				.clk(clk),
+				.reg_en(mmio_add_en),
+				.data_in(mmio_add_shifted),
+				.rst(mmio_add_rst),
+				.data_out(mmio_address));
+				
+register #(1) ff_mmio_mux (
+				.clk(clk),
+				.reg_en(mmio_ff_en),
+				.data_in(mmio_flag),
+				.rst(mmio_ff_rst),
+				.data_out(mmio_mux_reg));
+
+assign mmio_flag = mmio_input_addr != {ADD_LEN{1'b0}}; // if mmio_addr != 0, then a MMIO has been set!		
+// Notice tht doing this is licit as the mmio_input_addr comes from a register of the DMA controller drvier, thus is a stable input.
+
+wire [ADD_LEN-1:0] muxed_address = mmio_mux_reg ? mmio_address : start_address;						
+		
+assign address = muxed_address + count;
 assign dma_addr = drive_dma_addr ? ( mux_old_addr ? old_address : address) :
 					{ADD_LEN{1'bz}};// {1'b0}}; XXX: puoi mettere 1'b0 per questioni estetiche, 
 					                // meno rosso a schermo. Funziona in entrambi i modi, però 
@@ -262,8 +289,8 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 			IDLE : 		
 				next_state <= rqst ? GET_REGS : IDLE;
 			GET_REGS : 
-				next_state <= rd_wr ? (security_violation ? END_READ : LOAD_DMA_ADD) : 
-							  (security_violation ? END_WRITE : READ_DEV0);
+				next_state <= num_words_null ? (rd_wr ? END_READ : END_WRITE) : 
+				              mmio_flag ? LOAD_DMA_ADD : (rd_wr ? LOAD_DMA_ADD : READ_DEV0);
 			// =============
 			//     Read
 			// ============= 
@@ -271,8 +298,8 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= dma_ready ? READ_MEM : LOAD_DMA_ADD;
 			READ_MEM :
 				next_state <= dma_resp  ? ERROR : 
-                              fifo_full ? FIFO_FULL_RD :
-                              flag_cnt_words_mem ? SEND_TO_DEV0 :
+                              fifo_full ? (mmio_flag ? FIFO_FULL_WR : FIFO_FULL_RD ) :
+                              flag_cnt_words_mem ? (mmio_flag ? SEND_TO_MEM0 : SEND_TO_DEV0) :
                               dma_ready ? READ_MEM : OLD_ADDR_RD;
 			OLD_ADDR_RD : 
 				next_state <= dma_ready ? READ_MEM : OLD_ADDR_RD;
@@ -326,9 +353,9 @@ always @(state, rqst, rd_wr, dma_ready, fifo_full, dma_resp, flag_cnt_words, fla
 				next_state <= EMPTY_FIFO_WRITE;
 			EMPTY_FIFO_WRITE :
 				next_state <= dma_resp ? ERROR : 
-							  dma_ready ? ( fifo_empty_partial ? RESTORE_DEV_COUNT : EMPTY_FIFO_WRITE ) : OLD_ADDR_EMP_FIFO_W;
+							  dma_ready ? ( fifo_empty_partial ? (mmio_flag ? RESTORE_MSP_COUNT : RESTORE_DEV_COUNT) : EMPTY_FIFO_WRITE ) : OLD_ADDR_EMP_FIFO_W;
 			OLD_ADDR_EMP_FIFO_W :
-				next_state <= dma_ready ? ( fifo_empty_partial ? RESTORE_DEV_COUNT : EMPTY_FIFO_WRITE ) : OLD_ADDR_EMP_FIFO_W ;
+				next_state <= dma_ready ? ( fifo_empty_partial ? (mmio_flag ? RESTORE_MSP_COUNT : RESTORE_DEV_COUNT) : EMPTY_FIFO_WRITE ) : OLD_ADDR_EMP_FIFO_W;
 			RESTORE_DEV_COUNT : 
 				next_state <= READ_DEV1;
 						      
@@ -357,6 +384,10 @@ always @(state,dma_ready) begin
 	fifo_rst <= 1'b0;
 	fifo_wr_rd <= 1'b0;
 	load_dev_or_msp <= 1'b0;
+	mmio_add_en <= 1'b0;
+	mmio_add_rst <= 1'b0;
+	mmio_ff_en <= 1'b0;
+	mmio_ff_rst <= 1'b0;
 	msp_count_reg_en_f <= 1'b0;
 	msp_count_rst <= 1'b0;
 	mux_old_addr <= 1'b0;
@@ -373,6 +404,8 @@ always @(state,dma_ready) begin
 			count_rst <= 1'b1;
 			dev_count_rst <= 1'b1;
 			fifo_rst <= 1'b1;
+            mmio_add_rst <= 1'b1;
+			mmio_ff_rst <= 1'b1;
 			msp_count_rst <= 1'b1;
 			old_addr_rst <= 1'b1;
 			words_rst <= 1'b1;
@@ -390,6 +423,7 @@ always @(state,dma_ready) begin
 		begin
 			addr0_reg_en <= 1'b1;
 			words_reg_en <= 1'b1;
+            mmio_add_en <= 1'b1;
 			`ifdef SIM 
 			dma_ack <= 1'b1; // signal "rqst aquired" to DEV
 			`endif
@@ -507,6 +541,7 @@ always @(state,dma_ready) begin
 			count_en <= 1'b1; //enable to allow the loading
 			count_load <= 1'b1;
 			dma_we <= 2'b11;
+			mmio_ff_en <= 1'b1;
 			out_to_msp <= 1'b1;
 			drive_dma_addr <= 1'b1;
 		end
@@ -543,9 +578,10 @@ always @(state,dma_ready) begin
 		begin
 			count_en <= 1'b1;  //load msp counter
 			count_load <= 1'b1;
-			//load_dev_or_msp <= 1'b0;
+			load_dev_or_msp <= mmio_flag; // Dirty trick: in case of mmio operation, the msp counter already stores the counting from the read-from-mem operation. Thus, the device register is used to keep track of the write-to-mem op.
 			dma_we <= 2'b11;
 			drive_dma_addr <= 1'b1;
+            mmio_ff_en <= 1'b1; 
 			out_to_msp <= 1'b1;
 		end
 		EMPTY_FIFO_WRITE :

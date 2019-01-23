@@ -16,7 +16,7 @@ module  simple_dma_device (
     per_din, 			// Peripheral data input
     per_en,				// Peripheral enable (high active)
     per_we,				// Peripheral write enable (high active)
-    sys_reset,			// Main system reset
+    reset,				// Main system reset
 // INPUTs from DMA
 	dev_in,
 	dma_ack,
@@ -46,7 +46,7 @@ input			[13:0]	per_addr;		// Peripheral address
 input			[15:0] 	per_din;		// Peripheral data input
 input       	        per_en;         // Peripheral enable (high active)
 input	          [1:0] per_we;         // Peripheral write enable (high active)
-input   	            sys_reset;	        // Main system reset
+input   	            reset;	        // Main system reset
 // INPUTs from DMA
 input			 [15:0] dev_in;			// Data from DMA Controller
 input					dma_ack;
@@ -115,7 +115,7 @@ wire [DEC_SZ-1:0] reg_rd    = reg_dec & {DEC_SZ{reg_read}};
 //============================================================================
 // 3) REGISTERS
 //============================================================================
-wire reset = sys_reset | config_reg[RESET_REGS];
+
 // START_ADDR Register
 //-----------------   
 reg  [15:0] start_addr;
@@ -158,8 +158,10 @@ assign mmio_start_address = mmio_addr;
 //---------------------------------------   
 reg  [15:0] read_reg;
 wire        read_reg_wr    = dma_ack & dma_rqst & dma_rd_wr;
-always @ (posedge clk or posedge reset)
-  if   (reset)          read_reg <= 16'h0000;
+wire		read_reg_reset = reset | config_reg[RESET_REGS];
+
+always @ (posedge clk or posedge read_reg_reset)
+  if   (read_reg_reset) read_reg <= 16'h0000;
   else if (read_reg_wr) read_reg <= dev_in; // input from the DMA controller
   else 				    read_reg <= read_reg;
 
@@ -168,9 +170,10 @@ always @ (posedge clk or posedge reset)
 //---------------------------------------   
 reg [15:0] write_reg;
 wire write_reg_wr    = reg_wr[WRITE_REG];
+wire write_reg_reset = reset | config_reg[RESET_REGS];
 
-always @(posedge clk or posedge reset)
-  if (reset)             write_reg <= 16'h0000;
+always @(posedge clk or posedge write_reg_reset)
+  if (write_reg_reset)   write_reg <= 16'h0000;
   else if (write_reg_wr) write_reg <= per_din;
   else	                 write_reg <= write_reg;
   
@@ -312,6 +315,5 @@ assign non_atom_ack = (~config_reg[13] & config_reg[RD_WR]) | write_reg_wr;
 assign dev_ack      = config_reg[NON_ATOMIC] ? non_atom_ack : 1'b1;
 assign dma_rqst     = config_reg[START] & ~config_reg[15] ;
 assign dma_rd_wr    = config_reg[RD_WR]; // 1: Read | 0: Write
-
 
 endmodule 

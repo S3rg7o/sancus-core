@@ -458,10 +458,11 @@ openMSP430 dut (
 
 
 `ifdef DMA_CONTR_TEST // Include the dma_controller.v and a simple device to test it.
-parameter FIFO_DEPTH = 6; // ---> the number of register is = 2^FIFO_DEPTH
+`define FIFO_DEPTH 3 // ---> the number of register is = 2^FIFO_DEPTH
 
 wire [14:0] dma_num_words;
 wire [15:0]	dma_start_address;
+wire [15:0] mmio_start_addr;
 wire        dma_error_flag;
 wire 		dma_rd_wr;
 wire		dma_rqst;
@@ -478,7 +479,7 @@ wire [15:0] mem_accessed = dma_addr << 1; // show mem. location being accesesed 
 //----------------------------------
 dma_controller #( .ADD_LEN(15),
 				  .DATA_LEN(16),
-				  .FIFO_DEPTH(FIFO_DEPTH))	
+				  .FIFO_DEPTH(`FIFO_DEPTH))	
 	dma_cntrl (
 	// Outputs to Device
 	.dma_ack		(dma_ack),
@@ -494,6 +495,7 @@ dma_controller #( .ADD_LEN(15),
 	// Inputs from Device
 	.num_words		(dma_num_words),
 	.start_addr		(dma_start_address),
+	.mmio_input_addr(mmio_start_addr),
 	.rd_wr			(dma_rd_wr),
 	.rqst			(dma_rqst),
 	.dev_ack		(dev_ack),
@@ -518,10 +520,11 @@ simple_dma_device dma_dev0 (
 	.dma_num_words	(dma_num_words),	// Number of words to be read
 	.dma_rd_wr		(dma_rd_wr),		// Read or write request
 	.dma_rqst		(dma_rqst),			// DMA op. request
-	.dma_start_address (dma_start_address), // Starting address for DMA op.
+	.dma_start_address  (dma_start_address), // Starting address for DMA op.
+	.mmio_start_address (mmio_start_addr),
 	// INPUTs from uP
     .clk		    (mclk),		// Main system clock
-    .reset			(puc_rst),	// Main system reset
+    .sys_reset  	(puc_rst),	// Main system reset
 	.per_addr       (per_addr), // Peripheral address
     .per_din        (per_din),  // Peripheral data input
     .per_en         (per_en),   // Peripheral enable (high active)
