@@ -554,7 +554,6 @@ always @(state,dma_ready) begin
 			fifo_en <= 1'b1;		
 			old_addr_reg_en <= 1'b1;
 			out_to_msp <= 1'b1;
-			$display("Send to mem");
 		end
 		OLD_ADDR_WR :
 		begin
@@ -610,6 +609,18 @@ always @(state,dma_ready) begin
 			count_load <= 1'b1;
 			msp_count_reg_en_f <= 1'b1;
 			load_dev_or_msp <= 1'b1;
+		end
+		default : //Reset on default 
+		begin
+			addr0_rst <= 1'b1;
+			count_rst <= 1'b1;
+			dev_count_rst <= 1'b1;
+			fifo_rst <= 1'b1;
+            mmio_add_rst <= 1'b1;
+			mmio_ff_rst <= 1'b1;
+			msp_count_rst <= 1'b1;
+			old_addr_rst <= 1'b1;
+			words_rst <= 1'b1;
 		end
 		endcase	
 end
