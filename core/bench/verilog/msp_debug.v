@@ -126,7 +126,7 @@ wire [15:0] pc          		= tb_openMSP430.dut.frontend_0.pc;
 
 `ifdef DMA_CONTR_TEST
 wire  [4:0] dma_cntrl_state		= tb_openMSP430.dma_cntrl.state;
-
+wire  [15:0] dev_config_reg     = tb_openMSP430.dma_dev0.config_reg;
 //Instantiate the FIFO registers 
 genvar gi;
 generate for (gi=0; gi<(2**`FIFO_DEPTH); gi=gi+1) begin : fifo_regs
@@ -549,6 +549,24 @@ always @(dma_cntrl_state)
 		24  : dma_state   = "RESTORE_DEV_COUNT";
 	default : dma_state   = "XXXXX";
 	endcase
+	
+reg [8*32-1:0] config_reg;  
+   
+always @(dev_config_reg)
+	case(dev_config_reg)
+		16'h0003 : config_reg = "MMIO_READ";
+		16'h0001 : config_reg = "MMIO_WRITE";
+		16'h0005 : config_reg = "READ_OP";          
+		16'h8004 : config_reg = "END_READ";
+		16'h0009 : config_reg = "WRITE_OP";
+		16'h0809 : config_reg = "WRITE_OK";       
+		16'h001D : config_reg = "READ_OP_ACK";
+		16'h200D : config_reg = "WAIT_READ_ACK";  
+		16'hA00C : config_reg = "END_READ_ACK"; 
+		16'h0020 : config_reg = "RESET_REGS";	
+		16'h0200 : config_reg = "DMA_ERROR";	
+		default  : config_reg = "XXXXX";
+endcase
 `endif
 
 // Registers

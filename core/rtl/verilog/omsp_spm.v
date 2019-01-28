@@ -3,6 +3,9 @@
 `include "openMSP430_defines.v"
 `endif
 
+
+//MAL instantiated for each SM in the system
+
 module omsp_spm(
   input  wire                    mclk,
   input  wire                    puc_rst,
@@ -134,9 +137,12 @@ wire create_violation = check_new_spm &
                          //do_overlap(r12, r13, secret_start, secret_end) |
                          //do_overlap(r14, r15, public_start, public_end) |
                          //do_overlap(r14, r15, secret_start, secret_end));
-wire dma_access_public = dma_en & (dma_addr >= public_start) & (dma_addr < public_end);
-wire dma_access_secret = dma_en & (dma_addr >= secret_start) & (dma_addr < secret_end);                         
-assign dma_violation     = dma_access_public | dma_access_secret; //Sergio: prevent any DMA access to the protected memory
+// =============================================================
+// Naive DMA Implementation: no memory access control enforced
+// =============================================================
+//wire dma_access_public = dma_en & (dma_addr >= public_start) & (dma_addr < public_end);
+//wire dma_access_secret = dma_en & (dma_addr >= secret_start) & (dma_addr < secret_end);                         
+assign dma_violation     = 1'b0;// dma_access_public | dma_access_secret; //Sergio: prevent any DMA access to the protected memory
  
 assign violation = enabled & (mem_violation | exec_violation | create_violation);
 assign executing = enabled & exec_public;
