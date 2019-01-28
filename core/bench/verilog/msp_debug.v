@@ -517,10 +517,7 @@ always @(dma_cntrl_state)
 		0	: dma_state   = "IDLE";
 		1	: dma_state   = "GET_REGS";
 		2	: dma_state   = "LOAD_DMA_ADD";
-		3	: begin
-				dma_state   = "READ_MEM";
-				$display("DMA-Read Mem");
-			  end
+		3	: dma_state   = "READ_MEM";
 		4	: dma_state   = "ERROR";
 		5	: dma_state   = "OLD_ADDR_RD";
 		6	: dma_state   = "SEND_TO_DEV0";
@@ -532,10 +529,7 @@ always @(dma_cntrl_state)
 		12	: dma_state   = "READ_DEV1";
 		13	: dma_state   = "WAIT_WRITE";	
 		14	: dma_state   = "SEND_TO_MEM0";
-		15	: begin
-				dma_state   = "SEND_TO_MEM1";		
-				$display("DMA-Write Mem");
-			  end
+		15	: dma_state   = "SEND_TO_MEM1";		
 		16	: dma_state   = "OLD_ADDR_WR";
 		17	: dma_state   = "END_WRITE";
 		26  : dma_state   = "FIFO_FULL_RD";
