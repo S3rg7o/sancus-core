@@ -125,15 +125,19 @@ wire [15:0] pc          		= tb_openMSP430.dut.frontend_0.pc;
 
 
 `ifdef DMA_CONTR_TEST
-wire  [4:0] dma_cntrl_state		= tb_openMSP430.dma_cntrl.state;
+wire  [4:0]  dma_cntrl_state    = tb_openMSP430.dma_cntrl.state;
 wire  [15:0] dev_config_reg     = tb_openMSP430.dma_dev0.config_reg;
 //Instantiate the FIFO registers 
 genvar gi;
-generate for (gi=0; gi<(2**`FIFO_DEPTH); gi=gi+1) begin : fifo_regs
+	`ifdef tb_FIFO_DEPTH
+		localparam depth = `tb_FIFO_DEPTH;
+	`else	
+		localparam depth = tb_openMSP430.dma_cntrl.FIFO_DEPTH;
+	`endif 
+generate for (gi=0; gi<(2**depth); gi=gi+1) begin : fifo_regs
 wire [16:0] fifo_register = tb_openMSP430.dma_cntrl.fifo_mem.genregs[gi].fifo.register;
 end 
 endgenerate	
-
 `endif 
 //=============================================================================
 // 3) GENERATE DEBUG SIGNALS
