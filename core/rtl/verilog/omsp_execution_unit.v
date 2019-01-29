@@ -186,7 +186,7 @@ wire                sm_violation;
 wire                sp_overflow;
 wire         [15:0] sm_current_id;
 wire         [15:0] sm_prev_id;
-wire                violation;
+//wire                violation; (sergio) è superfluo
 wire                enter_sm;
 
 wire do_sm_inst     = (e_state == `E_EXEC) & inst_so[`SANCUS];
