@@ -53,7 +53,10 @@
 //`define SHOW_PMEM_WAVES  
 //`define SHOW_DMEM_WAVES
 
+//`define FIFO_DEPTH 3 // ---> the number of register is = 2^FIFO_DEPTH
+
 `define DMA_CONTR_TEST
+
 
 
 module  tb_openMSP430;
@@ -458,7 +461,7 @@ openMSP430 dut (
 
 
 `ifdef DMA_CONTR_TEST // Include the dma_controller.v and a simple device to test it.
-`define FIFO_DEPTH 3 // ---> the number of register is = 2^FIFO_DEPTH
+
 
 wire [14:0] dma_num_words;
 wire [15:0]	dma_start_address;
@@ -477,9 +480,11 @@ wire [15:0] mem_accessed = dma_addr << 1; // show mem. location being accesesed 
 //
 // DMA Controller
 //----------------------------------
-dma_controller #( .ADD_LEN(15),
-				  .DATA_LEN(16),
-				  .FIFO_DEPTH(`FIFO_DEPTH))	
+dma_controller #( `ifdef FIFO_DEPTH
+                       .FIFO_DEPTH(`FIFO_DEPTH),
+                  `endif
+                  .ADD_LEN(15),
+				  .DATA_LEN(16))	
 	dma_cntrl (
 	// Outputs to Device
 	.dma_ack		(dma_ack),
