@@ -196,7 +196,7 @@ always @ (posedge mclk or posedge puc_rst)
   else          dma_violation_dly <=  dma_violation;
 // External interface read data
 assign      dbg_mem_din   =  ext_mem_din;
-assign      dma_dout      =  dma_violation_dly ? 16'h0000 : ( ext_mem_din & {16{dma_ready_dly}}) ; //TODO consider to use a delayed version of dma_violation to prevent any asynchronous flickering 
+assign      dma_dout      =  dma_violation_dly ? 16'h0000 : ( ext_mem_din & {16{dma_ready_dly}}) ; //dma_violation_dly used in order to prevent any asynchronous flickering 
 
 
 `else
