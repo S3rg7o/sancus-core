@@ -189,9 +189,14 @@ wire  [1:0] ext_mem_wr    =  dbg_mem_en ? dbg_mem_wr    :  dma_we;
 wire [15:1] ext_mem_addr  =  dbg_mem_en ? dbg_mem_addr  :  dma_addr;
 wire [15:0] ext_mem_dout  =  dbg_mem_en ? dbg_mem_dout  :  dma_din;
 
+
+reg         dma_violation_dly;
+always @ (posedge mclk or posedge puc_rst)
+  if (puc_rst)  dma_violation_dly <=  1'b0;
+  else          dma_violation_dly <=  dma_violation;
 // External interface read data
 assign      dbg_mem_din   =  ext_mem_din;
-assign      dma_dout      =  ext_mem_din & {16{dma_ready_dly}};
+assign      dma_dout      =  dma_violation_dly ? 16'h0000 : ( ext_mem_din & {16{dma_ready_dly}}) ; //TODO consider to use a delayed version of dma_violation to prevent any asynchronous flickering 
 
 
 `else
