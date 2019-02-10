@@ -1,10 +1,11 @@
 # sancus-core
 [![Build Status](https://travis-ci.org/sancus-pma/sancus-core.svg?branch=master)](https://travis-ci.org/sancus-pma/sancus-core)
 
-Minimal OpenMSP430 hardware extensions for isolation and attestation.
+Minimal OpenMSP430 hardware extensions for isolation and attestation. Sancus implementation with secure DMA support: any attempt of accessing protected memory is detected and prevented from internal MAL circuitry.
 
-## Simulation of DMA device access
-
+## Installation and C Examples
+For the installation instructions, please refer to https://github.com/S3rg7o/sancus-main .
+Some examples, written in C code, show the security guarantees that Sancus can offer. The source codes are provided at https://github.com/S3rg7o/sancus-example
 
 ## Write to Memory
 Device - DMA interface
