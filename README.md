@@ -7,7 +7,7 @@ The current Sancus version supports secure DMA implementation: any attempt of ac
 ## Installation and C Examples
 For the installation instructions, please refer to https://github.com/S3rg7o/sancus-main.
 
-Some examples, written in C code, show the security guarantees that Sancus can offer. The source codes are provided at https://github.com/S3rg7o/sancus-example.
+Some examples, written in C code, show the security guarantees that Sancus can offer. The source codes are provided at https://github.com/S3rg7o/sancus-examples.
 
 ## Write to Memory
 Device - DMA interface
